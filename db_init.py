@@ -5,16 +5,6 @@ import db_config
 from models.user import User
 
 
-# def db_init():
-#     connection = psycopg2.connect(dbname=db_config.name, user=db_config.user, password=db_config.password,
-#                                   host=db_config.host)
-#     cursor = connection.cursor()
-#     with open("schema.sql", 'r') as schema:
-#         cursor.execute(schema.read())
-#     connection.commit()
-#     cursor.close()
-#     connection.close()
-
 def db_init():
     connection = psycopg2.connect(dbname=db_config.name, user=db_config.user, password=db_config.password,
                                   host=db_config.host)
