@@ -1,3 +1,4 @@
+from modules.dbconector import DbConnector
 from modules.dbfield import DbField
 
 
@@ -8,7 +9,9 @@ class Model:
         pass
 
     def create(self):
-        pass
+        sql = 'INSERT INTO "{0}" {1}'.format(self.tbl_name, self.get_sql_insert_fields())
+        dbconnection = DbConnector()
+        dbconnection.execute_set(sql)
 
     def edit(self):
         pass
@@ -18,6 +21,10 @@ class Model:
 
     def delete(self):
         pass
+
+    def load_from_json(self, json_payload):
+        for key in json_payload:
+            setattr(self, key, json_payload[key])
 
     @classmethod
     def get_sql_create(cls):
@@ -42,3 +49,19 @@ class Model:
             if isinstance(getattr(cls, item), DbField):
                 fields.append(getattr(cls, item))
         return fields
+
+    def get_sql_insert_fields(self):
+        keys = ""
+        values = ""
+        for i, item in enumerate(self.get_fields_list()):
+            if item.value:
+                keys += item.name
+                if item.get_type() == "INT":
+                    values += item.value
+                else:
+                    values += "'{0}'".format(item.value)
+                if i < len(self.get_fields_list()) - 1:
+                    keys += ", "
+                    values += ", "
+        return '({0}) VALUES ({1})'.format(keys, values)
+

@@ -7,7 +7,10 @@ class DbConnector:
     cursor = None
 
     def __init__(self):
-        pass
+        self.connect()
+
+    def __del__(self):
+        self.disconnect()
 
     def create_cursor(self):
         self.cursor = self.connection.cursor()
@@ -25,7 +28,10 @@ class DbConnector:
         self.cursor.close()
         self.connection.close()
 
-    def execute(self, statement):
-        self.connection()
-        self.cursor.execute(statement=statement)
+    def execute_get(self, statement):
+        self.cursor.execute(statement)
         return self.cursor.fetchall()
+
+    def execute_set(self, statement):
+        self.cursor.execute(statement)
+        self.connection.commit()
