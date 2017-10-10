@@ -16,11 +16,30 @@ class Model:
     def edit(self):
         pass
 
-    def get(self):
-        pass
+    def get_where_params(self, conditions):
+        sql = ''
+        for i, condition in enumerate(conditions):
+            sql += "{0} = '{1}'".format(condition, conditions[condition])
+            if i < len(conditions) - 1:
+                sql += " AND "
+        return sql
+
+    def get(self, params):
+        sql = 'SELECT * FROM "{0}" WHERE {1}'.format(self.tbl_name, self.get_where_params(params))
+        dbconnection = DbConnector()
+        try:
+            datafield = dbconnection.execute_get(sql)[0]
+            self.load_from_array(datafield)
+        except IndexError:
+            pass  # todo:found flag
+        return self
 
     def delete(self):
         pass
+
+    def load_from_array(self, array):
+        for key in array:
+            setattr(self, key, array[key])
 
     def load_from_json(self, json_payload):
         for key in json_payload:
@@ -50,6 +69,13 @@ class Model:
                 fields.append(getattr(cls, item))
         return fields
 
+    def serialize(self):
+        array = {}
+        for item in reversed(dir(self)):
+            if isinstance(getattr(self, item), DbField):
+                array[item] = getattr(self, item).val()
+        return array
+
     def get_sql_insert_fields(self):
         keys = ""
         values = ""
@@ -64,4 +90,3 @@ class Model:
                     keys += ", "
                     values += ", "
         return '({0}) VALUES ({1})'.format(keys, values)
-

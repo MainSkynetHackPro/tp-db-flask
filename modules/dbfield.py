@@ -9,12 +9,12 @@ class DbField:
 
     def __repr__(self):
         if self.value:
-            return self.value
+            return str(self.value)
         return "Empty DBField object [{0}]".format(self.name)
 
     def __str__(self):
         if self.value:
-            return self.value
+            return str(self.value)
         return "Empty DBField object [{0}]".format(self.name)
 
     def __set__(self, instance, value):

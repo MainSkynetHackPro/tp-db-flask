@@ -1,4 +1,4 @@
-from flask import Blueprint, request
+from flask import Blueprint, request, json
 
 from models.user import User
 
@@ -16,9 +16,10 @@ def create_user(nickname):
 
 @user.route('/<nickname>/profile', methods=['GET'])
 def get_user_profile(nickname):
-    return nickname
+    user = User().get({'nickname': nickname})
+    return json.dumps(user.serialize())
 
 
-@user.route('/<nickname>/profile', methods=['GET'])
+@user.route('/<nickname>/profile', methods=['POST'])
 def edit_user_profile(nickname):
     return nickname
