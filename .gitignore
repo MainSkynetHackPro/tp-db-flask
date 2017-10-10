@@ -2,3 +2,4 @@
 __pycache__/
 /.idea/
 /_tmp_sql/
+*.pyc

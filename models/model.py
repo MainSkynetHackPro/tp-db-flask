@@ -1,5 +1,6 @@
 from modules.dbconector import DbConnector
 from modules.dbfield import DbField
+from modules.sqlgenerator import SqlGenerator
 
 
 class Model:
@@ -9,23 +10,91 @@ class Model:
     def __init__(self):
         pass
 
+    def __serialize(self):
+        """
+        serialize model
+        :return: serialize model
+        { field_name: value,...}
+        """
+        array = {}
+        for field in self.__get_fields():
+            if getattr(self, field).val():
+                array[field] = getattr(self, field).val()
+        return array
+
+    def __get_fields(self):
+        """
+        return array of field names
+        :return:
+        [field_name,...]
+        """
+        fields = []
+        for item in dir(self):
+            if isinstance(getattr(self, item), DbField):
+                fields.append(item)
+        return fields
+
+    def __get_pk_condition(self):
+        """
+        get pk key value
+        :return:
+        {pk_field: pk_value,...}
+        """
+        array = {}
+        for item in dir(self):
+            if isinstance(getattr(self, item), DbField) and getattr(self, item).is_pk():
+                array[item] = getattr(self, item).val()
+        return array
+
+    def __deserialize(self, array):
+        """
+        deserialize model in array representation to model (fills fields)
+        :param param: fetched array from SqlGenerator
+        """
+        for item, value in array.items():
+            getattr(self, item).val(value)
+
     def create(self):
-        sql = 'INSERT INTO "{0}" {1}'.format(self.tbl_name, self.get_sql_insert_fields())
-        dbconnection = DbConnector()
-        dbconnection.execute_set(sql)
+        """
+        saves model to db
+        """
+        query = SqlGenerator(self.tbl_name, SqlGenerator.TYPE_INSERT)
+        query.values(self.__serialize())
+        query.execute()
         self.exists = True
 
     def update(self):
-        sql = """UPDATE "{0}" SET {1} WHERE {2}""".format(self.tbl_name, self.get_update_params(),
-                                                          self.get_where_pk_params())
-        dbconnection = DbConnector()
-        dbconnection.execute_set(sql)
+        """
+        updates model by pk
+        """
+        query = SqlGenerator(self.tbl_name, SqlGenerator.TYPE_UPDATE)
+        query.update(self.__serialize())
+        query.where(self.__get_pk_condition())
+        query.execute()
 
     def save(self):
+        """
+        updates or creates model based on self.exists
+        """
         if self.exists:
             self.update()
         else:
             self.create()
+
+    def get(self, params):
+        """
+        returns models list based on params
+        :param params: where params
+        {filed: value,...}
+        :return:
+        self for use like:
+        model = Model().get({key:value})
+        """
+        query = SqlGenerator(self.tbl_name, SqlGenerator.TYPE_SELECT)
+        query.where(params)
+        self.__deserialize(query.execute()[0])
+        self.exists = True
+        return self
 
     def get_update_params(self):
         update = {}
@@ -54,17 +123,6 @@ class Model:
             if i < len(conditions) - 1:
                 sql += " AND "
         return sql
-
-    def get(self, params):
-        sql = 'SELECT * FROM "{0}" WHERE {1}'.format(self.tbl_name, self.get_where_params(params))
-        dbconnection = DbConnector()
-        try:
-            datafield = dbconnection.execute_get(sql)[0]
-            self.load_from_array(datafield)
-            self.exists = True
-        except IndexError:
-            self.exists = False
-        return self
 
     def delete(self):
         pass
