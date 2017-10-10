@@ -1,4 +1,4 @@
-class DbField:
+class DbField(object):
     def __init__(self, name, type, primary_key=False):
         self.value = None
         self.name = name
@@ -18,10 +18,14 @@ class DbField:
         return "Empty DBField object [{0}]".format(self.name)
 
     def __set__(self, instance, value):
+        print(value, instance)
         self.value = value
 
     def set(self, value):
         self.value = value
+
+    def is_pk(self):
+        return self.options["primary_key"]
 
     def get(self):
         return self.value

@@ -9,9 +9,9 @@ user = Blueprint('user', __name__)
 def create_user(nickname):
     user = User()
     user.load_from_json(request.get_json())
-    user.nickname = nickname
-    user.create()
-    return nickname
+    user.nickname.val(nickname)
+    user.save()
+    return json.dumps(user.serialize())
 
 
 @user.route('/<nickname>/profile', methods=['GET'])
@@ -22,4 +22,7 @@ def get_user_profile(nickname):
 
 @user.route('/<nickname>/profile', methods=['POST'])
 def edit_user_profile(nickname):
-    return nickname
+    user = User().get({'nickname': nickname})
+    user.load_from_json(request.get_json())
+    user.save()
+    return json.dumps(user.serialize())

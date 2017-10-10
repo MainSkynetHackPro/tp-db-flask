@@ -19,8 +19,9 @@ def db_create_sql():
     models = (User,)
     create_sql = ''
     for model in models:
-        create_sql += 'DROP TABLE IF EXISTS "{0}";'.format(getattr(model, 'tbl_name'))
-        create_sql += model.get_sql_create()
+        m_object = model()
+        create_sql += 'DROP TABLE IF EXISTS "{0}";'.format(getattr(m_object, 'tbl_name'))
+        create_sql += m_object.get_sql_create()
     sql_file = open('_tmp_sql/db.sql', 'w')
     sql_file.write(create_sql)
     sql_file.close()

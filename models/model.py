@@ -4,6 +4,7 @@ from modules.dbfield import DbField
 
 class Model:
     tbl_name = 'base_model'
+    exists = False
 
     def __init__(self):
         pass
@@ -12,9 +13,39 @@ class Model:
         sql = 'INSERT INTO "{0}" {1}'.format(self.tbl_name, self.get_sql_insert_fields())
         dbconnection = DbConnector()
         dbconnection.execute_set(sql)
+        self.exists = True
 
-    def edit(self):
-        pass
+    def update(self):
+        sql = """UPDATE "{0}" SET {1} WHERE {2}""".format(self.tbl_name, self.get_update_params(),
+                                                          self.get_where_pk_params())
+        dbconnection = DbConnector()
+        dbconnection.execute_set(sql)
+
+    def save(self):
+        if self.exists:
+            self.update()
+        else:
+            self.create()
+
+    def get_update_params(self):
+        update = {}
+        for item in dir(self):
+            if isinstance(getattr(self, item), DbField) and not getattr(self, item).is_pk():
+                update[getattr(self, item).name] = getattr(self, item).val()
+
+        sql = ""
+        for i, key in enumerate(update):
+            sql += """{0} = '{1}'""".format(key, update[key])
+            if i < len(update) - 1:
+                sql += """, """
+        return sql
+
+    def get_where_pk_params(self):
+        where = {}
+        for item in dir(self):
+            if isinstance(getattr(self, item), DbField) and getattr(self, item).is_pk():
+                where[getattr(self, item).name] = getattr(self, item).val()
+        return self.get_where_params(where)
 
     def get_where_params(self, conditions):
         sql = ''
@@ -30,8 +61,9 @@ class Model:
         try:
             datafield = dbconnection.execute_get(sql)[0]
             self.load_from_array(datafield)
+            self.exists = True
         except IndexError:
-            pass  # todo:found flag
+            self.exists = False
         return self
 
     def delete(self):
@@ -39,14 +71,13 @@ class Model:
 
     def load_from_array(self, array):
         for key in array:
-            setattr(self, key, array[key])
+            getattr(self, key).val(array[key])
 
     def load_from_json(self, json_payload):
         for key in json_payload:
-            setattr(self, key, json_payload[key])
+            getattr(self, key).val(json_payload[key])
 
-    @classmethod
-    def get_sql_create(cls):
+    def get_sql_create(self):
         def get_fields_sql(fields):
             sql = ""
             for i, item in enumerate(fields):
@@ -57,16 +88,15 @@ class Model:
 
             return sql
 
-        sql = 'CREATE TABLE "{0}" ({1})'.format(getattr(cls, 'tbl_name'), get_fields_sql(cls.get_fields_list()))
+        sql = 'CREATE TABLE "{0}" ({1})'.format(getattr(self, 'tbl_name'), get_fields_sql(self.get_fields_list()))
 
         return sql
 
-    @classmethod
-    def get_fields_list(cls):
+    def get_fields_list(self):
         fields = []
-        for item in reversed(dir(cls)):
-            if isinstance(getattr(cls, item), DbField):
-                fields.append(getattr(cls, item))
+        for item in reversed(dir(self)):
+            if isinstance(getattr(self, item), DbField):
+                fields.append(getattr(self, item))
         return fields
 
     def serialize(self):
