@@ -5,6 +5,8 @@ from modules.dbfield import DbField
 class User(Model):
     tbl_name = 'user'
 
+    serialize_fields = ('nickname', 'fullname', 'email', 'about')
+
     def __init__(self):
         self.id = DbField(name='id', type='SERIAL', primary_key=True)
         self.nickname = DbField(name='nickname', type='VARCHAR(25)', primary_key=False)

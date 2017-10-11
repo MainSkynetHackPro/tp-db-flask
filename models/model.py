@@ -6,6 +6,7 @@ from modules.sqlgenerator import SqlGenerator
 class Model:
     tbl_name = 'base_model'
     exists = False
+    serialize_fields = None
 
     def __init__(self):
         pass
@@ -84,7 +85,7 @@ class Model:
     def get(self, params):
         """
         returns models list based on params
-        :param params: where params
+        :param params: where AND params
         {filed: value,...}
         :return:
         self for use like:
@@ -92,9 +93,58 @@ class Model:
         """
         query = SqlGenerator(self.tbl_name, SqlGenerator.TYPE_SELECT)
         query.where(params)
-        self.__deserialize(query.execute()[0])
-        self.exists = True
+        query_data = query.execute()
+        if query_data:
+            self.__deserialize(query_data[0])
+            self.exists = True
         return self
+
+    def get_or(self, params):
+        """
+        returns models list based on params
+        :param params: where OR params
+        {filed: value,...}
+        :return:
+        self for use like:
+        model = Model().get_or({key:value})
+        """
+        query = SqlGenerator(self.tbl_name, SqlGenerator.TYPE_SELECT)
+        query.where_or(params)
+        query_data = query.execute()
+        if query_data:
+            self.__deserialize(query_data[0])
+            self.exists = True
+        return self
+
+    def get_list_or(self, params):
+        """
+        returns models list based on params
+        :param params: where OR params
+        {filed: value,...}
+        :return:
+        self for use like:
+        model = Model().get_or({key:value})
+        """
+        query = SqlGenerator(self.tbl_name, SqlGenerator.TYPE_SELECT)
+        query.where_or(params)
+        return query.execute()
+
+    @classmethod
+    def serizlize_list(cls, list):
+        """
+        clean list by serialize_list values
+        :param list:
+        :return:
+        list with allowed values
+        """
+        cleaned_list = []
+        for item in list:
+            item_array = {}
+            for key, value in item.items():
+                if key in cls.serialize_fields:
+                    item_array[key] = value
+            cleaned_list.append(item_array)
+        return cleaned_list
 
     def get_update_params(self):
         update = {}
@@ -160,7 +210,7 @@ class Model:
     def serialize(self):
         array = {}
         for item in reversed(dir(self)):
-            if isinstance(getattr(self, item), DbField):
+            if isinstance(getattr(self, item), DbField) and self.serialize_fields and item in self.serialize_fields:
                 array[item] = getattr(self, item).val()
         return array
 

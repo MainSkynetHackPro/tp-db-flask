@@ -2,6 +2,7 @@
 import psycopg2
 
 import db_config
+from models.forum import Forum
 from models.user import User
 
 
@@ -16,7 +17,10 @@ def db_init():
 
 
 def db_create_sql():
-    models = (User,)
+    models = (
+        User,
+        Forum,
+    )
     create_sql = ''
     for model in models:
         m_object = model()

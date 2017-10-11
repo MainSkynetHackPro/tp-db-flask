@@ -14,6 +14,7 @@ class SqlGenerator(object):
         self.__type = query_type
         self.__update = {}
         self.__values = {}
+        self.__or = {}
 
     def __get_sql_where(self):
         """
@@ -26,6 +27,19 @@ class SqlGenerator(object):
             sql += """ "{0}" = '{1}'""".format(key, self.__where[key])
             if i < len(self.__where) - 1:
                 sql += " AND "
+        return sql
+
+    def __get_sql_where_or(self):
+        """
+        Generates sql string WHERE field=value OR
+        from self.where array
+        {field: value,...}
+        """
+        sql = """ WHERE """
+        for i, key in enumerate(self.__or):
+            sql += """ "{0}" = '{1}'""".format(key, self.__or[key])
+            if i < len(self.__or) - 1:
+                sql += " OR "
         return sql
 
     def __get_sql_select(self):
@@ -92,6 +106,8 @@ class SqlGenerator(object):
             sql += self.__get_sql_insert_attributes()
         if self.__where:
             sql += self.__get_sql_where()
+        if self.__or:
+            sql += self.__get_sql_where_or()
         return sql
 
     def execute(self):
@@ -114,6 +130,13 @@ class SqlGenerator(object):
         :param condition:
         """
         self.__where.update(condition)
+
+    def where_or(self, condition):
+        """
+        updates where condition
+        :param condition:
+        """
+        self.__or.update(condition)
 
     def update(self, condition):
         """
