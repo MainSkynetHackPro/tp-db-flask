@@ -115,7 +115,7 @@ class SqlGenerator(object):
             sql += self.__get_sql_where()
         if self.__or:
             sql += self.__get_sql_where_or()
-        return sql
+        return sql + ';'
 
     @staticmethod
     def safe_variable(variable):
@@ -140,6 +140,13 @@ class SqlGenerator(object):
         else:
             connector.execute_set(sql)
             return True
+
+    def get_sql(self):
+        """
+        get formatted sql
+        :return:
+        """
+        return self.__sql_query()
 
     def where(self, condition):
         """

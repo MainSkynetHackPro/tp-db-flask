@@ -11,6 +11,9 @@ class Model:
     def __init__(self):
         pass
 
+    def _serialize(self, filter_fileds=False, use_alias=False):
+        return self.__serialize(filter_fileds=False, use_alias=False)
+
     def __serialize(self, filter_fileds=False, use_alias=False):
         """
         serialize model

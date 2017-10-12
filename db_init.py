@@ -3,6 +3,7 @@ import psycopg2
 
 import db_config
 from models.forum import Forum
+from models.thread import Thread
 from models.user import User
 
 
@@ -19,7 +20,8 @@ def db_init():
 def db_create_sql():
     models = (
         # User,
-        Forum,
+        # Forum,
+        Thread,
     )
     create_sql = ''
     for model in models:

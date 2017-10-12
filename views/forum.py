@@ -1,5 +1,6 @@
 from flask import Blueprint, json, request
 from models.forum import Forum
+from models.thread import Thread
 from models.user import User
 
 view = Blueprint('forum', __name__)
@@ -25,7 +26,22 @@ def create_forum():
 
 @view.route('/<slug>/create', methods=['POST'])
 def create_branch(slug):
-    return slug
+    json_data = request.get_json()
+    user = User().get({'nickname': json_data['author']})
+    forum = Forum().get({'slug': slug})
+    if not (user.exists and forum.exists):
+        return json.dumps({
+            "message": "Can't find user or forum"
+        }), 404
+    thread_exists = Thread.get_serialised_with_forum_user_by_title(json_data['slug'])
+    if thread_exists:
+        return json.dumps(thread_exists), 409
+    thread = Thread()
+    thread.load_from_dict(json_data)
+    thread.forum_id.val(forum.id)
+    thread.user_id.val(user.id)
+    thread.save()
+    return json.dumps(Thread.get_serialised_with_forum_user_by_title(json_data['slug']))
 
 
 @view.route('/<slug>/details', methods=['GET'])
