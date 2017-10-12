@@ -52,7 +52,11 @@ def get_forum_details(slug):
 
 @view.route('/<slug>/threads', methods=['GET'])
 def get_threads_list(slug):
-    return slug
+    limit = request.args.get('limit')
+    since = request.args.get('since')
+    desc = request.args.get('desc')
+    threads = Thread.get_threads_list(limit, since, desc)
+    return json.dumps(threads)
 
 
 @view.route('/<slug>/users', methods=['GET'])

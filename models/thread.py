@@ -58,3 +58,28 @@ class Thread(Model):
             return data[0]
         else:
             return None
+
+    @classmethod
+    def get_threads_list(cls, limit, since, desc):
+        sql = """
+        SELECT
+              u.nickname as author,
+              t.created,
+              f.slug as forum,
+              t.id,
+              t.message,
+              t.slug as slug,
+              t.title,
+              0 as votes
+            FROM "{0}" as t
+            JOIN "{1}" as u ON u.id = t.user_id
+            JOIN "{2}" as f ON t.forum_id = f.id
+            WHERE t.created >= '{3}'
+        """.format(cls.tbl_name, User.tbl_name, Forum.tbl_name, SqlGenerator.safe_variable(since))
+        if desc:
+            sql += 'ORDER BY t.created DESC'
+        else:
+            sql += 'ORDER BY t.created'
+        sql += " LIMIT {0}".format(limit)
+        connector = DbConnector()
+        return connector.execute_get(sql)
