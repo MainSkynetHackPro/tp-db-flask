@@ -1,4 +1,3 @@
-from modules.dbconector import DbConnector
 from modules.dbfield import DbField
 from modules.sqlgenerator import SqlGenerator
 
@@ -7,6 +6,7 @@ class Model:
     tbl_name = 'base_model'
     exists = False
     serialize_fields = None
+    query = None
 
     def __init__(self):
         pass
@@ -145,6 +145,17 @@ class Model:
                     item_array[key] = value
             cleaned_list.append(item_array)
         return cleaned_list
+
+    @classmethod
+    def get_sql_generator(cls, type):
+        """
+        returns sql generator for select
+        :return:
+        """
+        types = (SqlGenerator.TYPE_SELECT, SqlGenerator.TYPE_UPDATE, SqlGenerator.TYPE_INSERT, SqlGenerator.TYPE_DELETE)
+        if type not in types:
+            raise Exception("Not allowed type")
+        return SqlGenerator(cls.tbl_name, type)
 
     def get_update_params(self):
         update = {}

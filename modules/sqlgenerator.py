@@ -11,6 +11,7 @@ class SqlGenerator(object):
         self.__sql = ""
         self.tbl_name = tbl_name
         self.__where = {}
+        self.__where_not = {}
         self.__type = query_type
         self.__update = {}
         self.__values = {}
@@ -26,6 +27,12 @@ class SqlGenerator(object):
         for i, key in enumerate(self.__where):
             sql += """ "{0}" = '{1}'""".format(key, self.__where[key])
             if i < len(self.__where) - 1:
+                sql += " AND "
+        if len(self.__where) > 0 and len(self.__where_not) > 0:
+            sql += " AND "
+        for i, key in enumerate(self.__where_not):
+            sql += """ "{0}" != '{1}'""".format(key, self.__where_not[key])
+            if i < len(self.__where_not) - 1:
                 sql += " AND "
         return sql
 
@@ -130,6 +137,13 @@ class SqlGenerator(object):
         :param condition:
         """
         self.__where.update(condition)
+
+    def where_not(self, condition):
+        """
+        updates where NOT condition
+        :param condition:
+        """
+        self.__where_not.update(condition)
 
     def where_or(self, condition):
         """
