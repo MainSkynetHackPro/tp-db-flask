@@ -5,35 +5,30 @@ from modules.sqlgenerator import SqlGenerator
 class Model:
     tbl_name = 'base_model'
     exists = False
-    serialize_fields = None
+    serialize_fields = '__all__'
     query = None
 
     def __init__(self):
         pass
 
-    def __serialize(self):
+    def __serialize(self, filter_fileds=False, use_alias=False):
         """
         serialize model
+        :input: user_alias - returns serialised by model alias if exists
+        filter_fields - returns allowed fields from self.serialize_fields
         :return: serialize model
         { field_name: value,...}
         """
         array = {}
-        for field in self.__get_fields():
-            if getattr(self, field).val():
-                array[field] = getattr(self, field).val()
+        for field in self.get_fields_names_list():
+            if getattr(self, field).val() is not None:
+                if not filter_fileds or filter_fileds and (
+                        self.serialize_fields == '__all__' or field in self.serialize_fields):
+                    if use_alias:
+                        array[getattr(self, field).alias] = str(getattr(self, field).val())
+                    else:
+                        array[field] = str(getattr(self, field).val())
         return array
-
-    def __get_fields(self):
-        """
-        return array of field names
-        :return:
-        [field_name,...]
-        """
-        fields = []
-        for item in dir(self):
-            if isinstance(getattr(self, item), DbField):
-                fields.append(item)
-        return fields
 
     def __get_pk_condition(self):
         """
@@ -157,46 +152,31 @@ class Model:
             raise Exception("Not allowed type")
         return SqlGenerator(cls.tbl_name, type)
 
-    def get_update_params(self):
-        update = {}
-        for item in dir(self):
-            if isinstance(getattr(self, item), DbField) and not getattr(self, item).is_pk():
-                update[getattr(self, item).name] = getattr(self, item).val()
-
-        sql = ""
-        for i, key in enumerate(update):
-            sql += """{0} = '{1}'""".format(key, update[key])
-            if i < len(update) - 1:
-                sql += """, """
-        return sql
-
-    def get_where_pk_params(self):
-        where = {}
-        for item in dir(self):
-            if isinstance(getattr(self, item), DbField) and getattr(self, item).is_pk():
-                where[getattr(self, item).name] = getattr(self, item).val()
-        return self.get_where_params(where)
-
-    def get_where_params(self, conditions):
-        sql = ''
-        for i, condition in enumerate(conditions):
-            sql += "{0} = '{1}'".format(condition, conditions[condition])
-            if i < len(conditions) - 1:
-                sql += " AND "
-        return sql
-
-    def delete(self):
-        pass
-
-    def load_from_array(self, array):
-        for key in array:
-            getattr(self, key).val(array[key])
+    def load_from_dict(self, dict):
+        """
+        loads data from dict
+        :param dict:
+        """
+        fields = self.get_fields_names_list()
+        for key in dict:
+            if key in fields:
+                getattr(self, key).val(dict[key])
 
     def load_from_json(self, json_payload):
+        """
+        loads data from parsed json
+        :param json_payload:
+        """
+        fields = self.get_fields_names_list()
         for key in json_payload:
-            getattr(self, key).val(json_payload[key])
+            if key in fields:
+                getattr(self, key).val(json_payload[key])
 
     def get_sql_create(self):
+        """
+        get model sql code
+        :return:
+        """
         def get_fields_sql(fields):
             sql = ""
             for i, item in enumerate(fields):
@@ -212,30 +192,31 @@ class Model:
         return sql
 
     def get_fields_list(self):
+        """
+        get fields list
+        [DbField,...]
+        """
         fields = []
         for item in reversed(dir(self)):
             if isinstance(getattr(self, item), DbField):
                 fields.append(getattr(self, item))
         return fields
 
-    def serialize(self):
-        array = {}
+    def get_fields_names_list(self):
+        """
+        get fields names list
+        [field_name,...]
+        """
+        fields = []
         for item in reversed(dir(self)):
-            if isinstance(getattr(self, item), DbField) and self.serialize_fields and item in self.serialize_fields:
-                array[item] = getattr(self, item).val()
-        return array
+            if isinstance(getattr(self, item), DbField):
+                fields.append(item)
+        return fields
 
-    def get_sql_insert_fields(self):
-        keys = ""
-        values = ""
-        for i, item in enumerate(self.get_fields_list()):
-            if item.value:
-                keys += item.name
-                if item.get_type() == "INT":
-                    values += item.value
-                else:
-                    values += "'{0}'".format(item.value)
-                if i < len(self.get_fields_list()) - 1:
-                    keys += ", "
-                    values += ", "
-        return '({0}) VALUES ({1})'.format(keys, values)
+    def serialize(self, use_alias=False):
+        """
+        get serialised model
+        :param use_alias: return field alias name
+        :return: dict {field: value,...}
+        """
+        return self.__serialize(filter_fileds=True, use_alias=use_alias)

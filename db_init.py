@@ -18,7 +18,7 @@ def db_init():
 
 def db_create_sql():
     models = (
-        User,
+        # User,
         Forum,
     )
     create_sql = ''

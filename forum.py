@@ -1,9 +1,9 @@
 from flask import Flask
 
-from views.forum import forum
+from views.forum import view as forum
 from views.service import service
 from views.thread import thread
-from views.user import user
+from views.user import view as user
 
 app = Flask(__name__)
 

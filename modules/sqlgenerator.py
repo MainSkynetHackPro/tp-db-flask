@@ -117,6 +117,16 @@ class SqlGenerator(object):
             sql += self.__get_sql_where_or()
         return sql
 
+    @staticmethod
+    def safe_variable(variable):
+        """
+        safe to use variable
+        :param variable:
+        :return:
+        """
+        # todo: safe
+        return variable
+
     def execute(self):
         """
         Executes sql string

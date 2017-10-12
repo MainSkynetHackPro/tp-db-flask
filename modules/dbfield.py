@@ -1,11 +1,13 @@
 class DbField(object):
-    def __init__(self, name, type, primary_key=False):
-        self.value = None
+    def __init__(self, name, type, primary_key=False, default=None, alias=None):
+        self.value = default
         self.name = name
         self.options = {
             "type": type,
             "primary_key": primary_key
         }
+        self.default = default
+        self.alias = alias if alias else name
 
     def __repr__(self):
         if self.value:
@@ -18,7 +20,6 @@ class DbField(object):
         return "Empty DBField object [{0}]".format(self.name)
 
     def __set__(self, instance, value):
-        print(value, instance)
         self.value = value
 
     def set(self, value):
@@ -31,7 +32,7 @@ class DbField(object):
         return self.value
 
     def val(self, value=None):
-        if value:
+        if value is not None:
             return self.set(value)
         return self.get()
 
@@ -45,4 +46,6 @@ class DbField(object):
         string = ""
         if self.options["primary_key"]:
             string += "PRIMARY KEY "
+        if self.default is not None:
+            string += " DEFAULT '{0}'".format(self.default)
         return string

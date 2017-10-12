@@ -1,41 +1,57 @@
-from flask import Blueprint, json
+from flask import Blueprint, json, request
+from models.forum import Forum
+from models.user import User
 
-forum = Blueprint('forum', __name__)
+view = Blueprint('forum', __name__)
 
 
-@forum.route('/create', methods=['POST'])
+@view.route('/create', methods=['POST'])
 def create_forum():
-    return 'created'
+    json_data = request.get_json()
+    user = User().get({'nickname': json_data['user']})
+    if not user.exists:
+        return json.dumps({
+            "message": "Can't find user with nickname {0}".format(json_data['user'])
+        }), 404
+    forum_exists = Forum.get_serialised_with_user(json_data['slug'])
+    if forum_exists:
+        return json.dumps(forum_exists), 409
+    forum = Forum()
+    forum.load_from_dict(json_data)
+    forum.user_id.val(user.id)
+    forum.save()
+    return json.dumps(forum.serialize(use_alias=True)), 201
 
 
-@forum.route('/<slug>/create', methods=['POST'])
+@view.route('/<slug>/create', methods=['POST'])
 def create_branch(slug):
     return slug
 
 
-@forum.route('/<slug>/details', methods=['GET'])
+@view.route('/<slug>/details', methods=['GET'])
 def get_forum_details(slug):
-    return slug
+    serialised_forum = Forum.get_serialised_with_user(slug)
+    return json.dumps(serialised_forum)
 
 
-@forum.route('/<slug>/threads', methods=['GET'])
+@view.route('/<slug>/threads', methods=['GET'])
 def get_threads_list(slug):
     return slug
 
 
-@forum.route('/<slug>/users', methods=['GET'])
+@view.route('/<slug>/users', methods=['GET'])
 def get_forum_users(slug):
     return slug
 
-
-@forum.route('/<id>/details', methods=['GET'])
-def get_post_details(id):
-    return id
-
-
-@forum.route('/<id>/details', methods=['POST'])
-def change_post_message(id):
-    return id
-
+#
+# @view.route('/<id>/details', methods=['GET'])
+# def get_post_details(id):
+#     return id
+#
+#
+# @view.route('/<id>/details', methods=['POST'])
+# def change_post_message(id):
+#     return id
+#
 
 

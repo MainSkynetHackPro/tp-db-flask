@@ -2,10 +2,10 @@ from flask import Blueprint, request, json
 
 from models.user import User
 
-user = Blueprint('user', __name__)
+view = Blueprint('user', __name__)
 
 
-@user.route('/<nickname>/create', methods=['POST'])
+@view.route('/<nickname>/create', methods=['POST'])
 def create_user(nickname):
     json_data = request.get_json()
     users_list = User().get_list_or({'nickname': nickname, 'email': json_data['email']})
@@ -13,19 +13,14 @@ def create_user(nickname):
         return json.dumps(User.serizlize_list(users_list)), 409
 
     user = User()
-    user.load_from_json(json_data)
+    user.load_from_dict(json_data)
     user.nickname.val(nickname)
     user.save()
     return json.dumps(user.serialize()), 201
 
 
-@user.route('/<nickname>/profile', methods=['GET'])
+@view.route('/<nickname>/profile', methods=['GET'])
 def get_user_profile(nickname):
-    test = User.get_sql_generator('select')
-    test.where({'about': 'about'})
-    test.where_not({'id': 11})
-    return json.dumps(test.execute())
-
     user = User().get({'nickname': nickname})
     if user.exists:
         return json.dumps(user.serialize()), 200
@@ -34,7 +29,7 @@ def get_user_profile(nickname):
     }), 404
 
 
-@user.route('/<nickname>/profile', methods=['POST'])
+@view.route('/<nickname>/profile', methods=['POST'])
 def edit_user_profile(nickname):
     json_data = request.get_json()
     params = {}
@@ -50,7 +45,7 @@ def edit_user_profile(nickname):
         }), 409
     user = User().get({'nickname': nickname})
     if user.exists:
-        user.load_from_json(request.get_json())
+        user.load_from_dict(request.get_json())
         user.save()
         return json.dumps(user.serialize())
     else:
