@@ -60,7 +60,7 @@ class Thread(Model):
             return None
 
     @classmethod
-    def get_threads_list(cls, limit, since, desc):
+    def get_threads_list(cls,slug, limit, since, desc):
         sql = """
         SELECT
               u.nickname as author,
@@ -74,8 +74,8 @@ class Thread(Model):
             FROM "{0}" as t
             JOIN "{1}" as u ON u.id = t.user_id
             JOIN "{2}" as f ON t.forum_id = f.id
-            WHERE t.created >= '{3}'
-        """.format(cls.tbl_name, User.tbl_name, Forum.tbl_name, SqlGenerator.safe_variable(since))
+            WHERE t.created >= '{3}' AND f.slug='{4}'
+        """.format(cls.tbl_name, User.tbl_name, Forum.tbl_name, SqlGenerator.safe_variable(since), SqlGenerator.safe_variable(slug))
         if desc:
             sql += 'ORDER BY t.created DESC'
         else:

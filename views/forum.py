@@ -55,13 +55,27 @@ def get_threads_list(slug):
     limit = request.args.get('limit')
     since = request.args.get('since')
     desc = request.args.get('desc')
-    threads = Thread.get_threads_list(limit, since, desc)
+    thread = Thread().get({'slug': slug})
+    if not thread.exists:
+        return json.dumps({
+            "message": "Can't find forum"
+        }), 404
+    threads = Thread.get_threads_list(slug, limit, since, desc)
     return json.dumps(threads)
 
 
 @view.route('/<slug>/users', methods=['GET'])
 def get_forum_users(slug):
-    return slug
+    limit = request.args.get('limit')
+    since = request.args.get('since')
+    desc = request.args.get('desc')
+    thread = Thread().get({'slug': slug})
+    if not thread.exists:
+        return json.dumps({
+            "message": "Can't find forum"
+        }), 404
+    users = Forum.get_forum_users(slug, limit, since, desc)
+    return json.dumps(users)
 
 #
 # @view.route('/<id>/details', methods=['GET'])

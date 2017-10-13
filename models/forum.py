@@ -36,3 +36,7 @@ class Forum(Model):
             return data[0]
         else:
             return None
+
+    @classmethod
+    def get_forum_users(cls, slug, limit, since, desc):
+        pass
