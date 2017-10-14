@@ -1,4 +1,4 @@
-from flask import Blueprint, json, request
+from flask import Blueprint, json, request, Response
 from models.forum import Forum
 from models.thread import Thread
 from models.user import User
@@ -11,17 +11,28 @@ def create_forum():
     json_data = request.get_json()
     user = User().get({'nickname': json_data['user']})
     if not user.exists:
-        return json.dumps({
-            "message": "Can't find user with nickname {0}".format(json_data['user'])
-        }), 404
+        return Response(
+            response=json.dumps({
+                "message": "Can't find user with nickname {0}".format(json_data['user'])
+            }),
+            status=404,
+            mimetype="application/json"
+        )
     forum_exists = Forum.get_serialised_with_user(json_data['slug'])
     if forum_exists:
-        return json.dumps(forum_exists), 409
-    forum = Forum()
-    forum.load_from_dict(json_data)
-    forum.user_id.val(user.id)
-    forum.save()
-    return json.dumps(forum.serialize(use_alias=True)), 201
+        return Response(
+            response=json.dumps(forum_exists),
+            status=409,
+            mimetype="application/json"
+        )
+    forum = Forum.create_and_get_serialized(user_id=user.id.val(), title=json_data['title'], slug=json_data['slug'])
+    forum['user'] = user.nickname.val()
+    forum.pop('user_id', None)
+    return Response(
+        response=json.dumps(forum),
+        status=201,
+        mimetype="application/json"
+    )
 
 
 @view.route('/<slug>/create', methods=['POST'])
@@ -87,5 +98,3 @@ def get_forum_users(slug):
 # def change_post_message(id):
 #     return id
 #
-
-

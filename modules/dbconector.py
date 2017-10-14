@@ -36,6 +36,11 @@ class DbConnector:
         self.cursor.execute(statement)
         self.connection.commit()
 
+    def execute_set_and_get(self, statement):
+        self.cursor.execute(statement)
+        self.connection.commit()
+        return self.get_datafield_array(self.cursor.fetchall(), self.cursor.description)
+
     def get_datafield_array(self, fetched, description):
         datafield_set = []
         for fetch_item in fetched:

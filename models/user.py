@@ -30,3 +30,22 @@ class User(Model):
         )
 
         return DbConnector().execute_get(sql)
+
+    @classmethod
+    def get_user_by_nickname(cls, nickname):
+        sql = """
+                    SELECT 
+                      about,
+                      email,
+                      nickname,
+                      fullname
+                    FROM "user"
+                    WHERE LOWER(nickname) = LOWER('{0}')
+                """.format(
+            SqlGenerator.safe_variable(nickname),
+        )
+        user = DbConnector().execute_get(sql)
+        if user:
+            return user[0]
+        else:
+            return None

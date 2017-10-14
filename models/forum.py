@@ -29,7 +29,11 @@ class Forum(Model):
             FROM "{0}" as f
               JOIN "{1}" as u ON f.user_id = u.id
             WHERE f.slug='{2}'
-        """.format(cls.tbl_name, User.tbl_name, SqlGenerator.safe_variable(slug))
+        """.format(
+            cls.tbl_name,
+            User.tbl_name,
+            SqlGenerator.safe_variable(slug)
+        )
         connector = DbConnector()
         data = connector.execute_get(sql)
         if data:
@@ -40,3 +44,16 @@ class Forum(Model):
     @classmethod
     def get_forum_users(cls, slug, limit, since, desc):
         pass
+
+    @classmethod
+    def create_and_get_serialized(cls, user_id, title, slug):
+        sql = """
+            INSERT INTO forum (user_id, title, slug)
+            VALUES ({0}, '{1}', '{2}')
+            RETURNING forum.slug, forum.title
+        """.format(
+            SqlGenerator.safe_variable(user_id),
+            SqlGenerator.safe_variable(title),
+            SqlGenerator.safe_variable(slug)
+        )
+        return DbConnector().execute_set_and_get(sql)[0]
