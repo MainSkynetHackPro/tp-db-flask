@@ -8,7 +8,7 @@ view = Blueprint('user', __name__)
 @view.route('/<nickname>/create', methods=['POST'])
 def create_user(nickname):
     json_data = request.get_json()
-    users_list = User().get_list_or({'nickname': nickname, 'email': json_data['email']})
+    users_list = User.get_users_with_nickname_or_email(nickname=nickname, email=json_data['email'])
     if users_list:
         return Response(json.dumps(User.serizlize_list(users_list)),
                         status=409,
@@ -26,10 +26,10 @@ def create_user(nickname):
 def get_user_profile(nickname):
     user = User().get({'nickname': nickname})
     if user.exists:
-        return json.dumps(user.serialize()), 200
-    return json.dumps({
+        return Response(response=json.dumps(user.serialize()), status=200, mimetype="application/json")
+    return Response(response=json.dumps({
         "message": "Can't find user with nickname {0}".format(nickname)
-    }), 404
+    }, status=404, mimetype="application/json"))
 
 
 @view.route('/<nickname>/profile', methods=['POST'])
@@ -43,15 +43,16 @@ def edit_user_profile(nickname):
 
     users_list = User().get_list_or(params)
     if users_list:
-        return json.dumps({
+        return Response(response=json.dumps({
             "message": "Can't find user with nickname {0}".format(nickname)
-        }), 409
+        }), status=409, mimetype="application/json")
     user = User().get({'nickname': nickname})
     if user.exists:
         user.load_from_dict(request.get_json())
         user.save()
-        return json.dumps(user.serialize())
+        return Response(response=json.dumps(user.serialize()), status=200, mimetype="application/json")
+
     else:
-        return json.dumps({
+        return Response(response=json.dumps({
             "message": "Can't find user with nickname {0}".format(nickname)
-        }), 404
+        }), status=404, mimetype="application/json")
