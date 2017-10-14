@@ -190,7 +190,7 @@ class Model:
 
             return sql
 
-        sql = 'CREATE TABLE "{0}" ({1})'.format(getattr(self, 'tbl_name'), get_fields_sql(self.get_fields_list()))
+        sql = 'CREATE TABLE "{0}" ({1});'.format(getattr(self, 'tbl_name'), get_fields_sql(self.get_fields_list()))
 
         return sql
 

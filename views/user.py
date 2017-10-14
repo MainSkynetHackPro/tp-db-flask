@@ -1,4 +1,4 @@
-from flask import Blueprint, request, json
+from flask import Blueprint, request, json, Response
 
 from models.user import User
 
@@ -10,13 +10,16 @@ def create_user(nickname):
     json_data = request.get_json()
     users_list = User().get_list_or({'nickname': nickname, 'email': json_data['email']})
     if users_list:
-        return json.dumps(User.serizlize_list(users_list)), 409
-
+        return Response(json.dumps(User.serizlize_list(users_list)),
+                        status=409,
+                        mimetype="application/json")
     user = User()
     user.load_from_dict(json_data)
     user.nickname.val(nickname)
     user.save()
-    return json.dumps(user.serialize()), 201
+    return Response(response=json.dumps(user.serialize()),
+                    status=201,
+                    mimetype="application/json")
 
 
 @view.route('/<nickname>/profile', methods=['GET'])
