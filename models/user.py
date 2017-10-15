@@ -49,3 +49,38 @@ class User(Model):
             return user[0]
         else:
             return None
+
+    @classmethod
+    def get_users_by_or_attributes(cls, params):
+        sql = """
+                    SELECT *
+                    FROM "user" 
+                """
+        or_param = False
+        for param in params:
+            if or_param:
+                sql += " OR "
+            else:
+                sql += " WHERE "
+            sql += """LOWER({0}) = LOWER('{1}')""".format(param, params[param])
+        user = DbConnector().execute_get(sql)
+        if user:
+            return user[0]
+        else:
+            return None
+
+    @classmethod
+    def update_by_nickname(cls, nickname, params):
+        sql = """
+            UPDATE "user" SET
+        """
+
+        for i, key in enumerate(params):
+            sql += """"{0}" = '{1}'""".format(key, params[key])
+            if i < len(params) - 1:
+                sql += """, """
+        sql += " WHERE nickname='{0}'".format(SqlGenerator.safe_variable(nickname))
+        sql += " RETURNING *;"
+        user = DbConnector().execute_set_and_get(sql)[0]
+        user.pop('id')
+        return user

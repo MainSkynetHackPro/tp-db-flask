@@ -48,31 +48,10 @@ def get_user_profile(nickname):
 @view.route('/<nickname>/profile', methods=['POST'])
 def edit_user_profile(nickname):
     json_data = request.get_json()
+    user = User.get_user_by_nickname(nickname)
     params = {}
-    if 'nickname' in json_data.keys():
-        params['nickname'] = json_data['nickname']
-    if 'email' in json_data.keys():
-        params['email'] = json_data['email']
 
-    users_list = User().get_list_or(params)
-    if users_list:
-        return Response(
-            response=json.dumps({
-                "message": "Can't find user with nickname {0}".format(nickname)
-            }),
-            status=409,
-            mimetype="application/json")
-    user = User().get({'nickname': nickname})
-    if user.exists:
-        user.load_from_dict(request.get_json())
-        user.save()
-        return Response(
-            response=json.dumps(user.serialize()),
-            status=200,
-            mimetype="application/json"
-        )
-
-    else:
+    if not user:
         return Response(
             response=json.dumps(
                 {"message": "Can't find user with nickname {0}".format(nickname)}
@@ -80,3 +59,26 @@ def edit_user_profile(nickname):
             status=404,
             mimetype="application/json"
         )
+    if 'nickname' in json_data.keys() and user['nickname'] != json_data['nickname']:
+        params['nickname'] = json_data['nickname']
+    if 'email' in json_data.keys() and user['email'] != json_data['email']:
+        params['email'] = json_data['email']
+
+    if params:
+        users_list = User.get_users_by_or_attributes(params)
+        if users_list:
+            return Response(
+                response=json.dumps({
+                    "message": "Fields conflict"
+                }),
+                status=409,
+                mimetype="application/json")
+    if len(json_data) > 0:
+        user_data = User.update_by_nickname(nickname, json_data)
+    else:
+        user_data = user
+    return Response(
+        response=json.dumps(user_data),
+        status=200,
+        mimetype="application/json"
+    )
