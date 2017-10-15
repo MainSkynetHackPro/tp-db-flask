@@ -9,8 +9,8 @@ view = Blueprint('forum', __name__)
 @view.route('/create', methods=['POST'])
 def create_forum():
     json_data = request.get_json()
-    user = User().get({'nickname': json_data['user']})
-    if not user.exists:
+    user = User.get_user_by_nickname(json_data['user'], hide_id=False)
+    if not user:
         return Response(
             response=json.dumps({
                 "message": "Can't find user with nickname {0}".format(json_data['user'])
@@ -25,8 +25,8 @@ def create_forum():
             status=409,
             mimetype="application/json"
         )
-    forum = Forum.create_and_get_serialized(user_id=user.id.val(), title=json_data['title'], slug=json_data['slug'])
-    forum['user'] = user.nickname.val()
+    forum = Forum.create_and_get_serialized(user_id=user['id'], title=json_data['title'], slug=json_data['slug'])
+    forum['user'] = user['nickname']
     forum.pop('user_id', None)
     return Response(
         response=json.dumps(forum),
@@ -57,8 +57,20 @@ def create_branch(slug):
 
 @view.route('/<slug>/details', methods=['GET'])
 def get_forum_details(slug):
-    serialised_forum = Forum.get_serialised_with_user(slug)
-    return json.dumps(serialised_forum)
+    forum = Forum.get_serialised_with_user(slug)
+    if not forum:
+        return Response(
+            response=json.dumps({
+                "message": "Can't find forum with slug: {0}".format(slug)
+            }),
+            status=404,
+            mimetype="application/json"
+        )
+    return Response(
+        response=json.dumps(forum),
+        status=200,
+        mimetype="application/json"
+    )
 
 
 @view.route('/<slug>/threads', methods=['GET'])

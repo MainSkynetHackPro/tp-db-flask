@@ -28,7 +28,7 @@ class Forum(Model):
                 u.nickname as user
             FROM "{0}" as f
               JOIN "{1}" as u ON f.user_id = u.id
-            WHERE f.slug='{2}'
+            WHERE LOWER(f.slug) = LOWER('{2}')
         """.format(
             cls.tbl_name,
             User.tbl_name,

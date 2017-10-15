@@ -1,53 +1,27 @@
-DROP TABLE IF EXISTS "user";
-
-CREATE TABLE "user" (
-  id       SERIAL PRIMARY KEY,
-  nickname CHAR(25),
-  fullname CHAR(50),
-  about    TEXT
+CREATE TABLE forum
+(
+    user_id INTEGER,
+    title VARCHAR(128),
+    slug VARCHAR(50),
+    id INTEGER DEFAULT nextval('forum_id_seq'::regclass) PRIMARY KEY NOT NULL,
+    count_threads INTEGER DEFAULT 0,
+    count_posts INTEGER DEFAULT 0
 );
-
-DROP TABLE IF EXISTS "forum";
-
-CREATE TABLE "forum" (
-  id            SERIAL PRIMARY KEY,
-  user_id       INT,
-  slug          CHAR(25),
-  count_posts   INT,
-  count_threads INT
+CREATE TABLE thread
+(
+    user_id INTEGER,
+    title VARCHAR(50),
+    slug VARCHAR(50),
+    message TEXT,
+    id INTEGER DEFAULT nextval('thread_id_seq'::regclass) PRIMARY KEY NOT NULL,
+    forum_id INTEGER,
+    created TIMESTAMP
 );
-
-DROP TABLE IF EXISTS "thread";
-
-CREATE TABLE "thread" (
-  id          SERIAL PRIMARY KEY,
-  user_id     INT,
-  forum_id    INT,
-  title       CHAR(50),
-  slug        CHAR(25),
-  message     TEXT,
-  votes       INT,
-  date_create TIME
-
+CREATE TABLE "user"
+(
+    nickname VARCHAR(50),
+    id INTEGER DEFAULT nextval('user_id_seq'::regclass) PRIMARY KEY NOT NULL,
+    fullname VARCHAR(50),
+    email VARCHAR(50),
+    about TEXT
 );
-
-DROP TABLE IF EXISTS "vote";
-
-CREATE TABLE "vote" (
-  id        SERIAL PRIMARY KEY,
-  user_id   INT,
-  thread_id INT,
-  vote      INT
-);
-
-DROP TABLE IF EXISTS "post";
-
-CREATE TABLE "post" (
-  id          SERIAL PRIMARY KEY,
-  user_id     INT,
-  parent_id   INT,
-  thread_id   INT,
-  message     TEXT,
-  date_create TIME
-);
-

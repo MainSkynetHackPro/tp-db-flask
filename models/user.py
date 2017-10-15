@@ -32,16 +32,18 @@ class User(Model):
         return DbConnector().execute_get(sql)
 
     @classmethod
-    def get_user_by_nickname(cls, nickname):
+    def get_user_by_nickname(cls, nickname, hide_id=True):
         sql = """
                     SELECT 
+                      {0}
                       about,
                       email,
                       nickname,
                       fullname
                     FROM "user"
-                    WHERE LOWER(nickname) = LOWER('{0}')
+                    WHERE LOWER(nickname) = LOWER('{1}')
                 """.format(
+            'id, ' if not hide_id else '',
             SqlGenerator.safe_variable(nickname),
         )
         user = DbConnector().execute_get(sql)
