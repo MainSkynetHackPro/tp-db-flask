@@ -36,6 +36,40 @@ class Thread(Model):
         self.exists = True
 
     @classmethod
+    def get_serialised_with_forum_user_by_id_or_slug(cls, id=None, slug=None):
+        if slug:
+            where_condition = """LOWER(t.slug)=LOWER('{0}')""".format(SqlGenerator.safe_variable(slug))
+        else:
+            where_condition = """t.id={0}""".format(id)
+
+        sql = """
+                SELECT
+                  u.nickname as author,
+                  t.created,
+                  f.slug as forum,
+                  t.id,
+                  t.message,
+                  t.slug as slug,
+                  t.title,
+                  0 as votes
+                FROM "{0}" as t
+                JOIN "{1}" as u ON u.id = t.user_id
+                JOIN "{2}" as f ON t.forum_id = f.id
+                WHERE {3}
+            """.format(
+            cls.tbl_name,
+            User.tbl_name,
+            Forum.tbl_name,
+            where_condition
+        )
+        connector = DbConnector()
+        data = connector.execute_get(sql)
+        if data:
+            return data[0]
+        else:
+            return None
+
+    @classmethod
     def get_serialised_with_forum_user_by_title(cls, slug):
         sql = """
             SELECT
@@ -83,3 +117,24 @@ class Thread(Model):
         sql += " LIMIT {0}".format(limit)
         connector = DbConnector()
         return connector.execute_get(sql)
+
+    @classmethod
+    def create_and_get_serialized(cls, user_id, forum_id, title, message, created, slug=None):
+        sql = """
+            INSERT INTO {0}
+            (user_id, forum_id, title, message, created{1})
+            VALUES ({2}, {3}, '{4}', '{5}', '{6}'{7})
+            RETURNING id, title, message, created{8}
+        """.format(
+            cls.tbl_name,
+            ', slug' if slug else '',
+            user_id,
+            forum_id,
+            title,
+            message,
+            created,
+            """, '{0}'""".format(SqlGenerator.safe_variable(slug)) if slug else '',
+            ', slug' if slug else ''
+        )
+        connector = DbConnector()
+        return connector.execute_set_and_get(sql)[0]

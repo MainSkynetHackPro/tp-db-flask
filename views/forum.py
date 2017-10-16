@@ -40,22 +40,31 @@ def create_forum():
 @view.route('/<slug>/create', methods=['POST'])
 def create_thread(slug):
     json_data = request.get_json()
-    user = User().get({'nickname': json_data['author']})
-    forum = Forum().get({'slug': slug})
-    if not (user.exists and forum.exists):
+    user = User.get_user_by_nickname(json_data['author'], hide_id=False)
+    forum = Forum.get_serialised_with_user(slug, hide_id=False)
+    if not (user and forum):
         return json.dumps({
             "message": "Can't find user or forum"
         }), 404
     if 'slug' in json_data.keys():
-        thread_exists = Thread.get_serialised_with_forum_user_by_title(json_data['slug'])
+        thread_exists = Thread.get_serialised_with_forum_user_by_id_or_slug(slug=json_data['slug'])
         if thread_exists:
             return json.dumps(thread_exists), 409
-    thread = Thread()
-    thread.load_from_dict(json_data)
-    thread.forum_id.val(forum.id)
-    thread.user_id.val(user.id)
-    thread.save()
-    return json.dumps(Thread.get_serialised_with_forum_user_by_title(json_data['slug']))
+    thread = Thread.create_and_get_serialized(
+        user_id=user['id'],
+        forum_id=forum['id'],
+        title=json_data['title'],
+        message=json_data['message'],
+        created=json_data['created'],
+    )
+    thread['author'] = user['nickname']
+    thread['forum'] = forum['slug']
+    thread['created'] = thread['created'].strftime('%Y-%m-%dT%H:%M:%S.%fZ')
+    return Response(
+        response=json.dumps(thread),
+        status=201,
+        mimetype="application/json"
+    )
 
 
 @view.route('/<slug>/details', methods=['GET'])

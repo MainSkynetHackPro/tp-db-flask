@@ -18,9 +18,9 @@ class Forum(Model):
         super().__init__()
 
     @classmethod
-    def get_serialised_with_user(cls, slug=None, id=None):
+    def get_serialised_with_user(cls, slug=None, id=None, hide_id=True):
         if slug:
-            where_condition = """ LOWER(f.slug)=LOWER('{0}')""".format(slug)
+            where_condition = """ LOWER(f.slug)=LOWER('{0}')""".format(SqlGenerator.safe_variable(slug))
         else:
             where_condition = """ f.id={0}""".format(id)
 
@@ -30,14 +30,15 @@ class Forum(Model):
                 f.slug,
                 f.count_threads as threads,
                 f.count_posts as posts,
-                u.nickname as user
+                u.nickname as user {3}
             FROM "{0}" as f
               JOIN "{1}" as u ON f.user_id = u.id
             WHERE {2}
         """.format(
             cls.tbl_name,
             User.tbl_name,
-            where_condition
+            where_condition,
+            ', f.id as id' if hide_id == False else ''
         )
         connector = DbConnector()
         data = connector.execute_get(sql)
