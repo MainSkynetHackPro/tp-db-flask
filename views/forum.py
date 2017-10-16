@@ -18,14 +18,16 @@ def create_forum():
             status=404,
             mimetype="application/json"
         )
-    forum_exists = Forum.get_serialised_with_user(json_data['slug'])
-    if forum_exists:
-        return Response(
-            response=json.dumps(forum_exists),
-            status=409,
-            mimetype="application/json"
-        )
-    forum = Forum.create_and_get_serialized(user_id=user['id'], title=json_data['title'], slug=json_data['slug'])
+    if 'slug' in json_data.keys():
+        forum_exists = Forum.get_serialised_with_user(slug=json_data['slug'])
+        if forum_exists:
+            return Response(
+                response=json.dumps(forum_exists),
+                status=409,
+                mimetype="application/json"
+            )
+    forum = Forum.create_and_get_serialized(user_id=user['id'], title=json_data['title'],
+                                            slug=json_data['slug'] if 'slug' in json_data.keys() else None)
     forum['user'] = user['nickname']
     forum.pop('user_id', None)
     return Response(
@@ -36,7 +38,7 @@ def create_forum():
 
 
 @view.route('/<slug>/create', methods=['POST'])
-def create_branch(slug):
+def create_thread(slug):
     json_data = request.get_json()
     user = User().get({'nickname': json_data['author']})
     forum = Forum().get({'slug': slug})
@@ -44,9 +46,10 @@ def create_branch(slug):
         return json.dumps({
             "message": "Can't find user or forum"
         }), 404
-    thread_exists = Thread.get_serialised_with_forum_user_by_title(json_data['slug'])
-    if thread_exists:
-        return json.dumps(thread_exists), 409
+    if 'slug' in json_data.keys():
+        thread_exists = Thread.get_serialised_with_forum_user_by_title(json_data['slug'])
+        if thread_exists:
+            return json.dumps(thread_exists), 409
     thread = Thread()
     thread.load_from_dict(json_data)
     thread.forum_id.val(forum.id)

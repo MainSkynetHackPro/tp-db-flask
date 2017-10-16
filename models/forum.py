@@ -18,7 +18,12 @@ class Forum(Model):
         super().__init__()
 
     @classmethod
-    def get_serialised_with_user(cls, slug):
+    def get_serialised_with_user(cls, slug=None, id=None):
+        if slug:
+            where_condition = """ LOWER(f.slug)=LOWER('{0}')""".format(slug)
+        else:
+            where_condition = """ f.id={0}""".format(id)
+
         sql = """
             SELECT 
                 f.title,
@@ -28,11 +33,11 @@ class Forum(Model):
                 u.nickname as user
             FROM "{0}" as f
               JOIN "{1}" as u ON f.user_id = u.id
-            WHERE LOWER(f.slug) = LOWER('{2}')
+            WHERE {2}
         """.format(
             cls.tbl_name,
             User.tbl_name,
-            SqlGenerator.safe_variable(slug)
+            where_condition
         )
         connector = DbConnector()
         data = connector.execute_get(sql)
@@ -54,6 +59,6 @@ class Forum(Model):
         """.format(
             SqlGenerator.safe_variable(user_id),
             SqlGenerator.safe_variable(title),
-            SqlGenerator.safe_variable(slug)
+            SqlGenerator.safe_variable(slug) if slug else ''
         )
         return DbConnector().execute_set_and_get(sql)[0]
