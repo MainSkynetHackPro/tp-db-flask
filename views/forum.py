@@ -2,6 +2,7 @@ from flask import Blueprint, json, request, Response
 from models.forum import Forum
 from models.thread import Thread
 from models.user import User
+from modules.utils import format_time
 
 view = Blueprint('forum', __name__)
 
@@ -55,11 +56,12 @@ def create_thread(slug):
         forum_id=forum['id'],
         title=json_data['title'],
         message=json_data['message'],
-        created=json_data['created'],
+        created=json_data['created'] if 'created' in json_data else None,
+        slug=json_data['slug'] if 'slug' in json_data else None
     )
     thread['author'] = user['nickname']
     thread['forum'] = forum['slug']
-    thread['created'] = thread['created'].strftime('%Y-%m-%dT%H:%M:%S.%fZ')
+    thread['created'] = format_time(thread['created'])
     return Response(
         response=json.dumps(thread),
         status=201,
@@ -90,13 +92,12 @@ def get_threads_list(slug):
     limit = request.args.get('limit')
     since = request.args.get('since')
     desc = request.args.get('desc')
-    thread = Thread().get({'slug': slug})
-    if not thread.exists:
-        return json.dumps({
-            "message": "Can't find forum"
-        }), 404
     threads = Thread.get_threads_list(slug, limit, since, desc)
-    return json.dumps(threads)
+    return Response(
+            response=json.dumps(threads),
+            status=200,
+            mimetype="application/json"
+        )
 
 
 @view.route('/<slug>/users', methods=['GET'])
