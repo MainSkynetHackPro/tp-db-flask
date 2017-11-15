@@ -41,7 +41,7 @@ def edit_user_profile(nickname):
     if status == DbModel.CONFLICTS:
         return json_response(
             {
-                'message': 'Conflict with user {0}'.format(user[0]['nickname'])
+                'message': 'Conflict with user {0}'.format(user['nickname'])
             },
             DbModel.CONFLICTS
         )

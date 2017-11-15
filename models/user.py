@@ -65,19 +65,26 @@ class User(DbModel):
         return data[0] if data else {}
 
     def update_by_nickname(self, nickname, payload):
+        if not payload:
+            user = self.get_by_nickname(nickname)
+            if user:
+                return user, self.FOUND
+            return {}, self.NOT_FOUND
         user = self.get_by_nickname(nickname, hide_id=False)
         if not user:
             return {}, self.NOT_FOUND
         user_id = user['id']
-        if 'nickname' not in payload:
-            payload['nickname'] = nickname
-        user = self.get_others_with_nicnkname_or_email(user_id, payload['nickname'], payload['email'])
+        user = self.find_others_with_nickname_or_email(
+            user_id,
+            payload['nickname'] if 'nickname' in payload else None,
+            payload['email'] if 'email' in payload else None
+        )
         if user:
             return user, self.CONFLICTS
         user = self.update_by_id(user_id, payload)
         return user, self.FOUND
 
-    def get_others_with_nicnkname_or_email(self, user_id, nickname, email):
+    def get_others_with_nickname_or_email(self, user_id, nickname, email):
         sql = self.sql_builder(self.sql_select(), self.sql_others_nickname_or_email(user_id, nickname, email))
         return DbConnector().execute_get(sql)
 
@@ -97,13 +104,30 @@ class User(DbModel):
         """.format(**{
             'tbl_name': self.tbl_name,
             'id': id,
-            'nickname': payload['nickname'],
-            'fullname': payload['fullname'],
-            'email': payload['email'],
-            'about': payload['about'],
             'update_str': update
         })
 
         return DbConnector().execute_set_and_get(sql)[0]
+
+    def find_others_with_nickname_or_email(self, user_id, nickname, email):
+        if not (nickname or email):
+            return []
+        where_condition = ''
+        if nickname:
+            where_condition += "LOWER({tbl_name}.nickname) = LOWER('{nickname}')".format(**{'tbl_name': self.tbl_name, 'nickname': nickname})
+        if email:
+            where_condition += "{or} LOWER({tbl_name}.email) = LOWER('{email}')".format(**{
+                'or': 'OR' if where_condition else '',
+                'tbl_name': self.tbl_name,
+                'email': email
+            })
+        where_condition = "WHERE ({where}) AND {tbl_name}.id != {id}".format(**{
+            'where': where_condition,
+            'tbl_name': self.tbl_name,
+            'id': user_id
+        })
+        data = DbConnector().execute_get(self.sql_builder(self.sql_select(), where_condition))
+        return data[0] if data else []
+
 
 
