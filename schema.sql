@@ -8,8 +8,8 @@ CREATE TABLE tbl_user
   about    TEXT
 );
 
-DROP TABLE IF EXISTS forum;
-CREATE TABLE forum
+DROP TABLE IF EXISTS tbl_forum;
+CREATE TABLE tbl_forum
 (
   id            SERIAL PRIMARY KEY NOT NULL,
   user_id       INTEGER,
@@ -19,8 +19,8 @@ CREATE TABLE forum
   count_posts   INTEGER DEFAULT 0
 );
 
-DROP TABLE IF EXISTS thread;
-CREATE TABLE thread
+DROP TABLE IF EXISTS tbl_thread;
+CREATE TABLE tbl_thread
 (
   id       SERIAL PRIMARY KEY NOT NULL,
   forum_id INTEGER,

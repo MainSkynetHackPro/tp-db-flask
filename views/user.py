@@ -38,4 +38,11 @@ def edit_user_profile(nickname):
                 'message': 'Failed to find user with nickname = {0}'.format(nickname)
             }, status
         )
+    if status == DbModel.CONFLICTS:
+        return json_response(
+            {
+                'message': 'Conflict with user {0}'.format(user[0]['nickname'])
+            },
+            DbModel.CONFLICTS
+        )
     return json_response(user, status)

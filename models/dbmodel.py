@@ -16,7 +16,7 @@ class DbModel:
         return sql
 
     @abc.abstractmethod
-    def sql_select(self):
+    def sql_select(self, hide_id=True):
         """
         get sql select statement
         SELECT

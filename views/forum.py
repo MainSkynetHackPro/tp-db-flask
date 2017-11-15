@@ -2,7 +2,7 @@ from flask import Blueprint, json, request, Response
 from models.forum import Forum
 from models.thread import Thread
 from models.user import User
-from modules.utils import format_time
+from modules.utils import format_time, json_response
 
 view = Blueprint('forum', __name__)
 
@@ -10,31 +10,24 @@ view = Blueprint('forum', __name__)
 @view.route('/create', methods=['POST'])
 def create_forum():
     json_data = request.get_json()
-    user = User.get_user_by_nickname(json_data['user'], hide_id=False)
+    user = User().get_by_nickname(json_data['user'], hide_id=False)
     if not user:
-        return Response(
-            response=json.dumps({
+        return json_response(
+            {
                 "message": "Can't find user with nickname {0}".format(json_data['user'])
-            }),
-            status=404,
-            mimetype="application/json"
+            },
+            404
         )
     if 'slug' in json_data.keys():
-        forum_exists = Forum.get_serialised_with_user(slug=json_data['slug'])
+        forum_exists = Forum().get_by_slug(slug=json_data['slug'])
         if forum_exists:
-            return Response(
-                response=json.dumps(forum_exists),
-                status=409,
-                mimetype="application/json"
-            )
-    forum = Forum.create_and_get_serialized(user_id=user['id'], title=json_data['title'],
-                                            slug=json_data['slug'] if 'slug' in json_data.keys() else None)
-    forum['user'] = user['nickname']
-    forum.pop('user_id', None)
-    return Response(
-        response=json.dumps(forum),
-        status=201,
-        mimetype="application/json"
+            return json_response(forum_exists, 409)
+    json_data.pop('user')
+    json_data['user_id'] = user['id']
+    forum = Forum().create(payload=json_data)
+    return json_response(
+        forum,
+        201,
     )
 
 
@@ -113,13 +106,3 @@ def get_forum_users(slug):
     users = Forum.get_forum_users(slug, limit, since, desc)
     return json.dumps(users)
 
-#
-# @view.route('/<id>/details', methods=['GET'])
-# def get_post_details(id):
-#     return id
-#
-#
-# @view.route('/<id>/details', methods=['POST'])
-# def change_post_message(id):
-#     return id
-#

@@ -82,12 +82,16 @@ class User(DbModel):
         return DbConnector().execute_get(sql)
 
     def update_by_id(self, id, payload):
+        update = ''
+        counter = len(payload)
+        for key, value in payload.items():
+            counter -= 1
+            update += " {0} = '{1}'".format(key, value)
+            if counter > 0:
+                update += ","
         sql = """
             UPDATE {tbl_name} SET
-              nickname='{nickname}',
-              fullname='{fullname}',
-              email='{email}',
-              about='{about}'
+              {update_str}
             WHERE id = {id}
             RETURNING nickname, fullname, email, about
         """.format(**{
@@ -96,7 +100,8 @@ class User(DbModel):
             'nickname': payload['nickname'],
             'fullname': payload['fullname'],
             'email': payload['email'],
-            'about': payload['about']
+            'about': payload['about'],
+            'update_str': update
         })
 
         return DbConnector().execute_set_and_get(sql)[0]

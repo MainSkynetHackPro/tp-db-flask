@@ -1,65 +1,73 @@
-from models.model import Model
+from models.dbmodel import DbModel
 from models.user import User
 from modules.dbconector import DbConnector
-from modules.dbfield import DbField
-from modules.sqlgenerator import SqlGenerator
 
 
-class Forum(Model):
-    tbl_name = 'forum'
+class Forum(DbModel):
+    tbl_name = 'tbl_forum'
 
-    def __init__(self):
-        self.id = DbField(name='id', type='SERIAL', primary_key=True)
-        self.slug = DbField(name='slug', type='VARCHAR(50)', primary_key=False)
-        self.title = DbField(name='title', type='VARCHAR(50)', primary_key=False)
-        self.user_id = DbField(name='user_id', type='INT', primary_key=False)
-        self.count_threads = DbField(name='count_threads', type='INT', primary_key=False, default=0, alias='threads')
-        self.count_posts = DbField(name='count_posts', type='INT', primary_key=False, default=0, alias='posts')
-        super().__init__()
+    def sql_select(self, hide_id=True):
+        additional = ''
+        if not hide_id:
+            additional = """
+                {tbl_name}.id,
+                {tbl_user}.id as user_id,
+            """.format(**{
+                'tbl_name': self.tbl_name,
+                'tbl_user': User.tbl_name
+            })
+        return """
+            SELECT 
+              {additional}
+              {tbl_user}.nickname as user,
+              {tbl_name}.slug,
+              {tbl_name}.tilte
+            FROM {tbl_name}        
+            JOIN {tbl_user} ON {tbl_user}.id = {tbl_name}.user_id
+        """.format(**{
+            'tbl_name': self.tbl_name,
+            'tbl_user': User.tbl_name,
+            'additional': additional
+        })
 
-    @classmethod
-    def get_serialised_with_user(cls, slug=None, id=None, hide_id=True):
-        if slug:
-            where_condition = """ LOWER(f.slug)=LOWER('{0}')""".format(SqlGenerator.safe_variable(slug))
-        else:
-            where_condition = """ f.id={0}""".format(id)
+    def create(self, payload):
+        sql = """
+            WITH f AS (
+              INSERT INTO {tbl_name}
+              (user_id, slug, title)
+              VALUES ({user_id}, '{slug}', '{title}')
+              RETURNING user_id, slug, title)
+            SELECT 
+              {tbl_user}.nickname as user,
+              f.slug,
+              f.title
+            FROM f
+            JOIN {tbl_user} ON {tbl_user}.id = f.user_id
+        """.format(**{
+            'tbl_name': self.tbl_name,
+            'tbl_user': User.tbl_name,
+            'user_id': payload['user_id'],
+            'slug': payload['slug'],
+            'title': payload['title']
+        })
+        return DbConnector().execute_set_and_get(sql)[0]
 
+    def get_by_slug(self, slug):
         sql = """
             SELECT 
-                f.title,
-                f.slug,
-                f.count_threads as threads,
-                f.count_posts as posts,
-                u.nickname as user {3}
-            FROM "{0}" as f
-              JOIN "{1}" as u ON f.user_id = u.id
-            WHERE {2}
-        """.format(
-            cls.tbl_name,
-            User.tbl_name,
-            where_condition,
-            ', f.id as id' if hide_id == False else ''
-        )
-        connector = DbConnector()
-        data = connector.execute_get(sql)
-        if data:
-            return data[0]
-        else:
-            return None
+              {tbl_user}.nickname as user,
+              {tbl_name}.slug,
+              {tbl_name}.title
+            FROM {tbl_name}        
+            JOIN {tbl_user} ON {tbl_user}.id = {tbl_name}.user_id
+            WHERE LOWER({tbl_name}.slug) = LOWER('{slug}')
+        """.format(**{
+            'sql_select': self.sql_select(),
+            'tbl_name': self.tbl_name,
+            'tbl_user': User.tbl_name,
+            'slug': slug
+        })
+        data = DbConnector().execute_get(sql)
+        return data[0] if data else []
 
-    @classmethod
-    def get_forum_users(cls, slug, limit, since, desc):
-        pass
 
-    @classmethod
-    def create_and_get_serialized(cls, user_id, title, slug):
-        sql = """
-            INSERT INTO forum (user_id, title, slug)
-            VALUES ({0}, '{1}', '{2}')
-            RETURNING forum.slug, forum.title
-        """.format(
-            SqlGenerator.safe_variable(user_id),
-            SqlGenerator.safe_variable(title),
-            SqlGenerator.safe_variable(slug) if slug else ''
-        )
-        return DbConnector().execute_set_and_get(sql)[0]
