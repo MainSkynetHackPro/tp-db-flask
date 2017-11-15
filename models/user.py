@@ -1,88 +1,104 @@
-from models.model import Model
+from models.dbmodel import DbModel
 from modules.dbconector import DbConnector
-from modules.dbfield import DbField
-from modules.sqlgenerator import SqlGenerator
 
 
-class User(Model):
-    tbl_name = 'user'
+class User(DbModel):
+    tbl_name = "tbl_user"
 
-    serialize_fields = ('nickname', 'fullname', 'email', 'about')
+    def sql_select(self, hide_id=True):
+        additional = ""
+        if not hide_id:
+            additional = "{0}.id, ".format(self.tbl_name)
+        return """
+            SELECT 
+              {additional}
+              {tbl_name}.nickname,
+              {tbl_name}.fullname,
+              {tbl_name}.email,
+              {tbl_name}.about
+            FROM {tbl_name}
+        """.format(**{'additional': additional, 'tbl_name': self.tbl_name})
 
-    def __init__(self):
-        self.id = DbField(name='id', type='SERIAL', primary_key=True)
-        self.nickname = DbField(name='nickname', type='VARCHAR(25)', primary_key=False)
-        self.fullname = DbField(name='fullname', type='VARCHAR(25)', primary_key=False)
-        self.email = DbField(name='email', type='VARCHAR(25)', primary_key=False)
-        self.about = DbField(name='about', type='VARCHAR(128)', primary_key=False)
-        super().__init__()
+    def sql_insert_returning(self, sql):
+        return """
+            {sql_insert}
+            RETURNING nickname, fullname, email, about
+        """.format(**{'sql_insert': sql})
 
-    @classmethod
-    def get_users_with_nickname_or_email(cls, nickname, email):
-        sql = """
-            SELECT *
-            FROM "user"
-            WHERE LOWER(nickname) = LOWER('{0}')
-                  OR LOWER(email) = LOWER('{1}')
-        """.format(
-            SqlGenerator.safe_variable(nickname),
-            SqlGenerator.safe_variable(email)
-        )
+    def sql_where_nickname_or_email(self, nickname, email):
+        return """
+            WHERE 
+              LOWER({tbl_name}.nickname) = LOWER('{nickname}') OR
+              LOWER({tbl_name}.email) = LOWER('{email}')
+        """.format(**{'tbl_name': self.tbl_name, 'nickname': nickname, 'email': email})
 
+    def sql_where_nickname(self, nickname):
+        return """
+            WHERE 
+              LOWER({tbl_name}.nickname) = LOWER('{nickname}')
+        """.format(**{'tbl_name': self.tbl_name, 'nickname': nickname,})
+
+    def sql_others_nickname_or_email(self, user_id, nickname, email):
+        return """
+            WHERE 
+              (LOWER({tbl_name}.nickname) = LOWER('{nickname}') OR
+              LOWER({tbl_name}.email) = LOWER('{email}')) AND
+              {tbl_name}.id != {id}
+        """.format(**{'tbl_name': self.tbl_name, 'nickname': nickname, 'email': email, 'id': user_id})
+
+    def create_by_nickname(self, nickname, payload):
+        user = self.get_all_by_nickname_or_email(nickname, payload['email'])
+        if user:
+            return user, self.EXISTS
+        payload['nickname'] = nickname
+        sql = self.sql_insert(fields=payload)
+        user = DbConnector().execute_set_and_get(self.sql_insert_returning(sql))
+        return user[0], self.CREATED
+
+    def get_all_by_nickname_or_email(self, nickname, email):
+        sql = self.sql_builder(self.sql_select(), self.sql_where_nickname_or_email(nickname, email))
         return DbConnector().execute_get(sql)
 
-    @classmethod
-    def get_user_by_nickname(cls, nickname, hide_id=True):
-        sql = """
-                    SELECT 
-                      {0}
-                      about,
-                      email,
-                      nickname,
-                      fullname
-                    FROM "user"
-                    WHERE LOWER(nickname) = LOWER('{1}')
-                """.format(
-            'id, ' if not hide_id else '',
-            SqlGenerator.safe_variable(nickname),
-        )
-        user = DbConnector().execute_get(sql)
+    def get_by_nickname(self, nickname, hide_id=True):
+        sql = self.sql_builder(self.sql_select(hide_id=hide_id), self.sql_where_nickname(nickname))
+        data = DbConnector().execute_get(sql)
+        return data[0] if data else {}
+
+    def update_by_nickname(self, nickname, payload):
+        user = self.get_by_nickname(nickname, hide_id=False)
+        if not user:
+            return {}, self.NOT_FOUND
+        user_id = user['id']
+        if 'nickname' not in payload:
+            payload['nickname'] = nickname
+        user = self.get_others_with_nicnkname_or_email(user_id, payload['nickname'], payload['email'])
         if user:
-            return user[0]
-        else:
-            return None
+            return user, self.CONFLICTS
+        user = self.update_by_id(user_id, payload)
+        return user, self.FOUND
 
-    @classmethod
-    def get_users_by_or_attributes(cls, params):
+    def get_others_with_nicnkname_or_email(self, user_id, nickname, email):
+        sql = self.sql_builder(self.sql_select(), self.sql_others_nickname_or_email(user_id, nickname, email))
+        return DbConnector().execute_get(sql)
+
+    def update_by_id(self, id, payload):
         sql = """
-                    SELECT *
-                    FROM "user" 
-                """
-        or_param = False
-        for param in params:
-            if or_param:
-                sql += " OR "
-            else:
-                sql += " WHERE "
-            sql += """LOWER({0}) = LOWER('{1}')""".format(param, params[param])
-        user = DbConnector().execute_get(sql)
-        if user:
-            return user[0]
-        else:
-            return None
+            UPDATE {tbl_name} SET
+              nickname='{nickname}',
+              fullname='{fullname}',
+              email='{email}',
+              about='{about}'
+            WHERE id = {id}
+            RETURNING nickname, fullname, email, about
+        """.format(**{
+            'tbl_name': self.tbl_name,
+            'id': id,
+            'nickname': payload['nickname'],
+            'fullname': payload['fullname'],
+            'email': payload['email'],
+            'about': payload['about']
+        })
 
-    @classmethod
-    def update_by_nickname(cls, nickname, params):
-        sql = """
-            UPDATE "user" SET
-        """
+        return DbConnector().execute_set_and_get(sql)[0]
 
-        for i, key in enumerate(params):
-            sql += """"{0}" = '{1}'""".format(key, params[key])
-            if i < len(params) - 1:
-                sql += """, """
-        sql += " WHERE nickname='{0}'".format(SqlGenerator.safe_variable(nickname))
-        sql += " RETURNING *;"
-        user = DbConnector().execute_set_and_get(sql)[0]
-        user.pop('id')
-        return user
+
