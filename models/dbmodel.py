@@ -1,0 +1,4 @@
+
+
+class DbModel:
+    pass

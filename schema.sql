@@ -1,27 +1,32 @@
+DROP TABLE IF EXISTS forum;
 CREATE TABLE forum
 (
-    user_id INTEGER,
-    title VARCHAR(128),
-    slug VARCHAR(50),
-    id INTEGER DEFAULT nextval('forum_id_seq'::regclass) PRIMARY KEY NOT NULL,
-    count_threads INTEGER DEFAULT 0,
-    count_posts INTEGER DEFAULT 0
+  id            SERIAL PRIMARY KEY NOT NULL,
+  user_id       INTEGER,
+  title         VARCHAR(128),
+  slug          VARCHAR(50),
+  count_threads INTEGER DEFAULT 0,
+  count_posts   INTEGER DEFAULT 0
 );
+DROP TABLE IF EXISTS thread;
+
 CREATE TABLE thread
 (
-    user_id INTEGER,
-    title VARCHAR(50),
-    slug VARCHAR(50),
-    message TEXT,
-    id INTEGER DEFAULT nextval('thread_id_seq'::regclass) PRIMARY KEY NOT NULL,
-    forum_id INTEGER,
-    created TIMESTAMP
+  id       SERIAL PRIMARY KEY NOT NULL,
+  user_id  INTEGER,
+  forum_id INTEGER,
+  slug     VARCHAR(50),
+  title    VARCHAR(50),
+  message  TEXT,
+  created  TIMESTAMP
 );
+DROP TABLE IF EXISTS "user";
+
 CREATE TABLE "user"
 (
-    nickname VARCHAR(50),
-    id INTEGER DEFAULT nextval('user_id_seq'::regclass) PRIMARY KEY NOT NULL,
-    fullname VARCHAR(50),
-    email VARCHAR(50),
-    about TEXT
+  id       SERIAL PRIMARY KEY NOT NULL,
+  nickname VARCHAR(50),
+  fullname VARCHAR(50),
+  email    VARCHAR(50),
+  about    TEXT
 );

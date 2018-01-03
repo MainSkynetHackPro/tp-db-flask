@@ -18,19 +18,10 @@ def db_init():
 
 
 def db_create_sql():
-    models = (
-        User,
-        Forum,
-        Thread,
-    )
     create_sql = ''
-    for model in models:
-        m_object = model()
-        create_sql += 'DROP TABLE IF EXISTS "{0}";'.format(getattr(m_object, 'tbl_name'))
-        create_sql += m_object.get_sql_create()
-    sql_file = open('_tmp_sql/db.sql', 'w')
-    sql_file.write(create_sql)
-    sql_file.close()
+    sql_file = open('schema.sql', 'r')
+    for line in sql_file:
+        create_sql += line
     return create_sql
 
 
