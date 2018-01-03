@@ -28,8 +28,8 @@ class DbConnector:
         self.cursor.close()
         self.connection.close()
 
-    def execute_get(self, statement):
-        self.cursor.execute(statement)
+    def execute_get(self, statement, variables=tuple()):
+        self.cursor.execute(statement, variables)
         return self.get_datafield_array(self.cursor.fetchall(), self.cursor.description)
 
     def execute_set(self, statement):

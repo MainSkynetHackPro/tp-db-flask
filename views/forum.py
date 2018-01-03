@@ -34,8 +34,8 @@ def create_forum():
 @view.route('/<slug>/create', methods=['POST'])
 def create_thread(slug):
     json_data = request.get_json()
-    user = User.get_user_by_nickname(json_data['author'], hide_id=False)
-    forum = Forum.get_serialised_with_user(slug, hide_id=False)
+    user = User().get_by_nickname(json_data['author'], hide_id=False)
+    forum = Forum().get_by_slug_with_id(slug)
     if not (user and forum):
         return json.dumps({
             "message": "Can't find user or forum"
@@ -85,11 +85,19 @@ def get_threads_list(slug):
     limit = request.args.get('limit')
     since = request.args.get('since')
     desc = request.args.get('desc')
+    if not since:
+        since = "0001-01-01T00:00:00.000Z"
     threads = Thread.get_threads_list(slug, limit, since, desc)
-    return Response(
-            response=json.dumps(threads),
-            status=200,
-            mimetype="application/json"
+    if threads:
+        return Response(
+                response=json.dumps(threads),
+                status=200,
+                mimetype="application/json"
+            )
+    else:
+        return json_response(
+            {'message': 'not found'},
+            404
         )
 
 

@@ -16,13 +16,13 @@ CREATE TABLE thread
   user_id  INTEGER,
   forum_id INTEGER,
   slug     VARCHAR(50),
-  title    VARCHAR(50),
+  title    VARCHAR(256),
   message  TEXT,
   created  TIMESTAMP
 );
-DROP TABLE IF EXISTS "user";
+DROP TABLE IF EXISTS member;
 
-CREATE TABLE "user"
+CREATE TABLE member
 (
   id       SERIAL PRIMARY KEY NOT NULL,
   nickname VARCHAR(50),

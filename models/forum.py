@@ -4,7 +4,7 @@ from modules.dbconector import DbConnector
 
 
 class Forum(DbModel):
-    tbl_name = 'tbl_forum'
+    tbl_name = 'forum'
 
     def sql_select(self, hide_id=True):
         additional = ''
@@ -70,4 +70,37 @@ class Forum(DbModel):
         data = DbConnector().execute_get(sql)
         return data[0] if data else []
 
+    def get_by_slug_with_id(self, slug):
+        sql = """
+            SELECT 
+              {tbl_name}.id,
+              {tbl_user}.nickname as user,
+              {tbl_name}.slug,
+              {tbl_name}.title
+            FROM {tbl_name}        
+            JOIN {tbl_user} ON {tbl_user}.id = {tbl_name}.user_id
+            WHERE LOWER({tbl_name}.slug) = LOWER('{slug}')
+        """.format(**{
+            'sql_select': self.sql_select(),
+            'tbl_name': self.tbl_name,
+            'tbl_user': User.tbl_name,
+            'slug': slug
+        })
+        data = DbConnector().execute_get(sql)
+        return data[0] if data else []
 
+    @classmethod
+    def get_serialised_with_user(cls, slug):
+        sql = """
+            SELECT
+              forum.count_posts,
+              forum.slug,
+              forum.count_threads,
+              forum.title,
+              member.nickname as user
+            FROM forum
+            JOIN member ON member.id = forum.user_id
+            WHERE LOWER(forum.slug) = LOWER(%s)
+        """
+        data = DbConnector().execute_get(sql, (slug,))
+        return data[0] if data else None

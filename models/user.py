@@ -3,7 +3,7 @@ from modules.dbconector import DbConnector
 
 
 class User(DbModel):
-    tbl_name = "tbl_user"
+    tbl_name = "member"
 
     def sql_select(self, hide_id=True):
         additional = ""
@@ -19,7 +19,8 @@ class User(DbModel):
             FROM {tbl_name}
         """.format(**{'additional': additional, 'tbl_name': self.tbl_name})
 
-    def sql_insert_returning(self, sql):
+    @classmethod
+    def sql_insert_returning(cls, sql):
         return """
             {sql_insert}
             RETURNING nickname, fullname, email, about
