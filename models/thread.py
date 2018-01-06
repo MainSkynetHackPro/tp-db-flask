@@ -97,7 +97,9 @@ class Thread(Model):
 
     @classmethod
     def get_threads_list(cls, slug, limit, since, desc):
+        data_tuple = tuple()
         sql = """
+        SET TIME ZONE 'GMT+3';
         SELECT
               u.nickname as author,
               t.created,
@@ -110,15 +112,28 @@ class Thread(Model):
             FROM "{0}" as t
             JOIN "{1}" as u ON u.id = t.user_id
             JOIN "{2}" as f ON t.forum_id = f.id
-            WHERE t.created >= '{3}' AND LOWER(f.slug)=LOWER('{4}')
-        """.format(cls.tbl_name, User.tbl_name, Forum.tbl_name, SqlGenerator.safe_variable(since), SqlGenerator.safe_variable(slug))
-        if desc:
+        """.format(cls.tbl_name, User.tbl_name, Forum.tbl_name)
+        sql += """
+            WHERE LOWER(f.slug) = LOWER(%s)
+        """
+        data_tuple += (slug,)
+        if since:
+            if desc == 'true':
+                sql += """
+                    AND t.created <= %s
+                """
+            else:
+                sql += """
+                    AND t.created >= %s
+                """
+            data_tuple += (since,)
+        if desc == 'true':
             sql += 'ORDER BY t.created DESC'
         else:
             sql += 'ORDER BY t.created'
-        sql += " LIMIT {0}".format(limit)
-        connector = DbConnector()
-        return connector.execute_get(sql)
+        if limit:
+            sql += " LIMIT {0}".format(int(limit))
+        return DbConnector().execute_get(sql, data_tuple)
 
     @classmethod
     def create_and_get_serialized(cls, user_id, forum_id, title, message, created=None, slug=None):

@@ -18,7 +18,7 @@ CREATE TABLE thread
   slug     VARCHAR(50),
   title    VARCHAR(256),
   message  TEXT,
-  created  TIMESTAMP
+  created  TIMESTAMP WITH TIME ZONE
 );
 DROP TABLE IF EXISTS member;
 

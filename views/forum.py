@@ -85,10 +85,11 @@ def get_threads_list(slug):
     limit = request.args.get('limit')
     since = request.args.get('since')
     desc = request.args.get('desc')
-    if not since:
-        since = "0001-01-01T00:00:00.000Z"
     threads = Thread.get_threads_list(slug, limit, since, desc)
-    if threads:
+    forum = Forum().get_by_slug(slug)
+    for thread in threads:
+        thread['created'] = format_time(thread['created'])
+    if forum:
         return Response(
                 response=json.dumps(threads),
                 status=200,

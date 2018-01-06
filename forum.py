@@ -1,3 +1,5 @@
+import pytz as pytz
+
 from flask import Flask
 
 from views.forum import view as forum
@@ -7,6 +9,7 @@ from views.user import view as user
 from views.post import view as post
 
 app = Flask(__name__)
+zone = pytz.timezone('Europe/Moscow')
 
 app.register_blueprint(service, url_prefix='/api/service')
 
