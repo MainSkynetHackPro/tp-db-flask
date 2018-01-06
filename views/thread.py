@@ -1,11 +1,14 @@
-from flask import Blueprint
+from flask import Blueprint, request
+
+from models.post import Post
 
 thread = Blueprint('thread', __name__)
 
 
 @thread.route('/<slug_or_id>/create', methods=['POST'])
 def create_thread(slug_or_id):
-    return str(1)
+    posts_data = request.get_json()
+    posts = Post.create_posts(posts_data)
 
 
 @thread.route('/<slug_or_id>/details', methods=['GET'])

@@ -19,6 +19,7 @@ def clear_db():
     DbConnector().execute_set(sql)
     return Response(response="", status=200)
 
+
 @service.route('/status', methods=['GET'])
 def get_db_status():
     return str(1)

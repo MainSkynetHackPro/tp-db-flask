@@ -8,8 +8,8 @@ CREATE TABLE forum
   count_threads INTEGER DEFAULT 0,
   count_posts   INTEGER DEFAULT 0
 );
-DROP TABLE IF EXISTS thread;
 
+DROP TABLE IF EXISTS thread;
 CREATE TABLE thread
 (
   id       SERIAL PRIMARY KEY NOT NULL,
@@ -20,8 +20,8 @@ CREATE TABLE thread
   message  TEXT,
   created  TIMESTAMP WITH TIME ZONE
 );
-DROP TABLE IF EXISTS member;
 
+DROP TABLE IF EXISTS member;
 CREATE TABLE member
 (
   id       SERIAL PRIMARY KEY NOT NULL,
@@ -30,3 +30,16 @@ CREATE TABLE member
   email    VARCHAR(50),
   about    TEXT
 );
+
+DROP TABLE IF EXISTS posts;
+CREATE TABLE posts
+(
+  id        SERIAL PRIMARY KEY NOT NULL,
+  user_id   INTEGER,
+  thread_id INTEGER,
+  forum_id  INTEGER,
+  parent_id INTEGER,
+  is_edited BOOLEAN,
+  created   TIMESTAMP WITH TIME ZONE,
+  message   TEXT
+)
