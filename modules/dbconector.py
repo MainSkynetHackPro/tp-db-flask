@@ -32,12 +32,12 @@ class DbConnector:
         self.cursor.execute(statement, variables)
         return self.get_datafield_array(self.cursor.fetchall(), self.cursor.description)
 
-    def execute_set(self, statement):
-        self.cursor.execute(statement)
+    def execute_set(self, statement, variables=tuple()):
+        self.cursor.execute(statement, variables)
         self.connection.commit()
 
-    def execute_set_and_get(self, statement):
-        self.cursor.execute(statement)
+    def execute_set_and_get(self, statement, variables=tuple()):
+        self.cursor.execute(statement, variables)
         self.connection.commit()
         return self.get_datafield_array(self.cursor.fetchall(), self.cursor.description)
 

@@ -37,13 +37,14 @@ def create_thread(slug):
     user = User().get_by_nickname(json_data['author'], hide_id=False)
     forum = Forum().get_by_slug_with_id(slug)
     if not (user and forum):
-        return json.dumps({
+        return json_response({
             "message": "Can't find user or forum"
-        }), 404
+        }, 404)
     if 'slug' in json_data.keys():
         thread_exists = Thread.get_serialised_with_forum_user_by_id_or_slug(slug=json_data['slug'])
         if thread_exists:
-            return json.dumps(thread_exists), 409
+            thread_exists['created'] = format_time(thread_exists['created'])
+            return json_response(thread_exists, 409)
     thread = Thread.create_and_get_serialized(
         user_id=user['id'],
         forum_id=forum['id'],

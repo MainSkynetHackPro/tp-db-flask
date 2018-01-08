@@ -15,7 +15,6 @@ class DbModel:
             sql += "{0} ".format(arg)
         return sql
 
-    @abc.abstractmethod
     def sql_select(self, hide_id=True):
         """
         get sql select statement

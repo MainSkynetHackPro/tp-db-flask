@@ -18,7 +18,8 @@ CREATE TABLE thread
   slug     VARCHAR(50),
   title    VARCHAR(256),
   message  TEXT,
-  created  TIMESTAMP WITH TIME ZONE
+  created  TIMESTAMP WITH TIME ZONE,
+  votes    INTEGER DEFAULT 0
 );
 
 DROP TABLE IF EXISTS member;
@@ -37,9 +38,18 @@ CREATE TABLE posts
   id        SERIAL PRIMARY KEY NOT NULL,
   user_id   INTEGER,
   thread_id INTEGER,
-  forum_id  INTEGER,
   parent_id INTEGER,
   is_edited BOOLEAN,
-  created   TIMESTAMP WITH TIME ZONE,
+  created   TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   message   TEXT
+);
+
+DROP TABLE IF EXISTS votes;
+CREATE TABLE votes
+(
+  id        SERIAL PRIMARY KEY NOT NULL,
+  user_id   INTEGER,
+  thread_id INTEGER,
+  voice     INTEGER,
+  UNIQUE (user_id, thread_id)
 )

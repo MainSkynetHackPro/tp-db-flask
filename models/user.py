@@ -130,5 +130,26 @@ class User(DbModel):
         data = DbConnector().execute_get(self.sql_builder(self.sql_select(), where_condition))
         return data[0] if data else []
 
+    @classmethod
+    def get_user_ids_by_slug(cls, usernames):
+        if not usernames:
+            return []
+        l_names = tuple()
+        sql = """
+            SELECT 
+              LOWER(nickname) as nickname,
+              id
+            FROM {tbl_name}
+            WHERE LOWER(nickname) in (
+        """.format_map({
+            'tbl_name': cls.tbl_name
+        })
+        for item in usernames:
+            l_names += (str(item).lower(),)
+            sql += " %s,"
+        sql = sql[:-1]
+        sql += ")"
+        return DbConnector().execute_get(sql, l_names)
+
 
 
