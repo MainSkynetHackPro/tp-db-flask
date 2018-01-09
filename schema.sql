@@ -26,7 +26,7 @@ DROP TABLE IF EXISTS member;
 CREATE TABLE member
 (
   id       SERIAL PRIMARY KEY NOT NULL,
-  nickname VARCHAR(50),
+  nickname CITEXT COLLATE pg_catalog.ucs_basic NOT NULL CONSTRAINT User_nickname_unique UNIQUE,
   fullname VARCHAR(50),
   email    VARCHAR(50),
   about    TEXT

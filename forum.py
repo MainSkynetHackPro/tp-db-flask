@@ -6,7 +6,7 @@ from views.forum import view as forum
 from views.service import service
 from views.thread import thread
 from views.user import view as user
-from views.post import view as post
+from views.post import post
 
 app = Flask(__name__)
 zone = pytz.timezone('Europe/Moscow')

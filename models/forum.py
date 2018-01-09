@@ -57,7 +57,9 @@ class Forum(DbModel):
             SELECT 
               {tbl_user}.nickname as user,
               {tbl_name}.slug,
-              {tbl_name}.title
+              {tbl_name}.title,
+              {tbl_name}.count_posts AS posts,
+              {tbl_name}.count_threads AS threads
             FROM {tbl_name}        
             JOIN {tbl_user} ON {tbl_user}.id = {tbl_name}.user_id
             WHERE LOWER({tbl_name}.slug) = LOWER('{slug}')
@@ -93,9 +95,9 @@ class Forum(DbModel):
     def get_serialised_with_user(cls, slug):
         sql = """
             SELECT
-              forum.count_posts,
+              forum.count_posts as posts,
               forum.slug,
-              forum.count_threads,
+              forum.count_threads as threads,
               forum.title,
               member.nickname as user
             FROM forum
@@ -104,3 +106,42 @@ class Forum(DbModel):
         """
         data = DbConnector().execute_get(sql, (slug,))
         return data[0] if data else None
+
+    @classmethod
+    def get_forum_users(cls, forum_id, limit, since, desc):
+        from models.post import Post
+        from models.thread import Thread
+        sql = """
+            SELECT 
+                u.nickname,
+                u.about,
+                u.email,
+                u.fullname
+            FROM {tbl_forum} AS f 
+            LEFT JOIN {tbl_thread} AS t ON t.forum_id = f.id
+            LEFT JOIN {tbl_post} AS p ON p.thread_id = t.id
+            LEFT JOIN {tbl_user} AS u ON u.id = p.user_id OR u.id = t.user_id
+            WHERE f.id = {forum_id} AND u.id IS NOT NULL {additional_where}
+            GROUP BY u.id
+            ORDER BY u.nickname {additional_order}
+            {limit}
+        """.format_map({
+            'tbl_forum': cls.tbl_name,
+            'tbl_thread': Thread.tbl_name,
+            'tbl_post': Post.tbl_name,
+            'tbl_user': User.tbl_name,
+            'forum_id': forum_id,
+            'additional_order': "DESC " if desc == 'true' else " ",
+            'limit': "LIMIT %(limit)s " if limit else " ",
+            'additional_where': "AND u.nickname > %(since)s" if since else " ",
+        })
+
+        data = {}
+        if limit:
+            data['limit'] = limit
+        if since:
+            data['since'] = since
+        if desc == 'true':
+            sql = sql.replace('>', '<')
+
+        return DbConnector().execute_get(sql, data)

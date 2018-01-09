@@ -12,9 +12,14 @@ thread = Blueprint('thread', __name__)
 @thread.route('/<slug_or_id>/create', methods=['POST'])
 def create_thread(slug_or_id):
     posts_data = request.get_json()
-    thread = Thread.get_by_slug_or_id(slug_or_id)
+    thread = Thread.get_by_slug_or_id_with_forum_id(slug_or_id)
     usernames = [i['author'] for i in posts_data]
     authors = User.get_user_ids_by_slug(usernames)
+    posts_ids = set([i['parent'] for i in posts_data if 'parent' in i])
+    if posts_ids:
+        posts = Post.get_posts_by_id_in_thread(thread['id'], posts_ids)
+        if len(posts) != len(posts_ids):
+            return json_response({'message': 'Parent in other thread'}, 409)
     if len(authors) != len(set(usernames)):
         return json_response(
             {'message': 'user not found'},
@@ -27,7 +32,7 @@ def create_thread(slug_or_id):
         post['parent_id'] = post['parent'] if 'parent' in post else 0
 
     if len(thread) > 0:
-        posts = Post.create_posts(posts_data, thread['id'])
+        posts = Post.create_posts(posts_data, thread['id'], thread['forum_id'])
     else:
         return json_response(
             {'message': 'thread not found'},
@@ -52,12 +57,34 @@ def get_thread_details(slug_or_id):
 
 @thread.route('/<slug_or_id>/details', methods=['POST'])
 def update_thread(slug_or_id):
-    return str(1)
+    json_data = request.get_json()
+    thread = Thread.get_by_slug_or_id(slug_or_id)
+    if not thread:
+        return json_response({'message': 'Thread not found'}, 404)
+    thread = Thread.update_thread(thread['id'], json_data, thread)
+    thread['created'] = format_time(thread['created'])
+    return json_response(thread, 200)
 
 
 @thread.route('/<slug_or_id>/posts', methods=['GET'])
 def get_thread_messages(slug_or_id):
-    return str(1)
+    sort = request.args.get('sort')
+    since = request.args.get('since')
+    limit = request.args.get('limit')
+    desc = request.args.get('desc')
+    thread = Thread.get_by_slug_or_id(slug_or_id)
+    posts = []
+    if not thread:
+        return json_response({'message': 'Thread not found'}, 404)
+    if sort == "flat" or sort is None:
+        posts = Thread.get_posts_flat_sorted(thread['id'], since, limit, desc)
+    elif sort == "tree":
+        posts = Thread.get_posts_tree_sorted(thread['id'], since, limit, desc)
+    elif sort == "parent_tree":
+        posts = Thread.get_posts_parent_tree_sorter(thread['id'], since, limit, desc)
+    for post in posts:
+        post['created'] = format_time(post['created'])
+    return json_response(posts, 200)
 
 
 @thread.route('/<slug_or_id>/vote', methods=['POST'])
@@ -67,6 +94,8 @@ def vote_thread(slug_or_id):
     if not thread:
         return json_response({'message': 'Thread not found'}, 404)
     user = User().get_by_nickname(post_data['nickname'], hide_id=False)
+    if not user:
+        return json_response({'message': 'User not found'}, 404)
     thread = Vote.vote_for_thread(user['id'], post_data['voice'], thread['id'])
     thread['created'] = format_time(thread['created'])
     return json_response(thread, 200)

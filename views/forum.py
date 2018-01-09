@@ -108,11 +108,11 @@ def get_forum_users(slug):
     limit = request.args.get('limit')
     since = request.args.get('since')
     desc = request.args.get('desc')
-    thread = Thread().get({'slug': slug})
-    if not thread.exists:
-        return json.dumps({
+    forum = Forum().get_by_slug_with_id(slug)
+    if not forum:
+        return json_response({
             "message": "Can't find forum"
-        }), 404
-    users = Forum.get_forum_users(slug, limit, since, desc)
-    return json.dumps(users)
+        }, 404)
+    users = Forum.get_forum_users(forum['id'], limit, since, desc)
+    return json_response(users, 200)
 

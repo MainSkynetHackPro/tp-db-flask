@@ -1,5 +1,7 @@
 import abc
 
+from modules.dbconector import DbConnector
+
 
 class DbModel:
     FOUND = 200
@@ -50,3 +52,11 @@ class DbModel:
                 keys += ","
                 values += ","
         return """INSERT INTO {0} ({1}) VALUES ({2})""".format(self.tbl_name, keys, values)
+
+    @classmethod
+    def get_count(cls):
+        sql = """
+            SELECT COUNT(*) as count FROM {tbl_name}
+        """.format_map({'tbl_name': cls.tbl_name})
+        return DbConnector().execute_get(sql)[0]['count']
+
