@@ -4,7 +4,6 @@ from models.dbmodel import DbModel
 from models.forum import Forum
 from models.user import User
 from modules.dbconector import DbConnector
-from modules.sqlgenerator import SqlGenerator
 
 
 class Thread(DbModel):
@@ -16,7 +15,7 @@ class Thread(DbModel):
     @classmethod
     def get_serialised_with_forum_user_by_id_or_slug(cls, id=None, slug=None):
         if slug:
-            where_condition = """LOWER(t.slug)=LOWER('{0}')""".format(SqlGenerator.safe_variable(slug))
+            where_condition = """LOWER(t.slug)=LOWER('{0}')""".format(slug)
         else:
             where_condition = """t.id={0}""".format(id)
 
@@ -63,7 +62,7 @@ class Thread(DbModel):
             JOIN "{1}" as u ON u.id = t.user_id
             JOIN "{2}" as f ON t.forum_id = f.id
             WHERE t.slug='{3}'
-        """.format(cls.tbl_name, User.tbl_name, Forum.tbl_name, SqlGenerator.safe_variable(slug))
+        """.format(cls.tbl_name, User.tbl_name, Forum.tbl_name, slug)
         connector = DbConnector
         data = connector.execute_get(sql)
         if data:
@@ -127,7 +126,7 @@ class Thread(DbModel):
             title,
             message,
             "'{0}'".format(created if created else datetime.now()),
-            """, '{0}'""".format(SqlGenerator.safe_variable(slug)) if slug else '',
+            """, '{0}'""".format(slug) if slug else '',
             ', slug' if slug else ''
         )
         connector = DbConnector

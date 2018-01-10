@@ -11,12 +11,7 @@ connection = psycopg2.connect(
 
 class DbConnector:
     @classmethod
-    def connect(cls):
-        return connection
-
-    @classmethod
     def execute_get(cls, statement, variables=tuple()):
-        connection = cls.connect()
         cursor = connection.cursor()
         cursor.execute(statement, variables)
         connection.commit()
@@ -26,7 +21,6 @@ class DbConnector:
 
     @classmethod
     def execute_set(cls, statement, variables=tuple()):
-        connection = cls.connect()
         cursor = connection.cursor()
         cursor.execute(statement, variables)
         connection.commit()
@@ -34,7 +28,6 @@ class DbConnector:
 
     @classmethod
     def execute_set_and_get(cls, statement, variables=tuple()):
-        connection = cls.connect()
         cursor = connection.cursor()
         cursor.execute(statement, variables)
         connection.commit()
