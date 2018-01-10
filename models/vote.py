@@ -17,14 +17,14 @@ class Vote(DbModel):
             UPDATE {tbl_thread} SET 
               votes = sub.votes
               FROM (SELECT SUM(voice) as votes FROM {tbl_name} WHERE thread_id = %s) as sub 
-            WHERE id=%s
+            WHERE id=%s;
         """.format_map({
             'tbl_name': cls.tbl_name,
             'tbl_thread': Thread.tbl_name,
             'set_statement': 'votes = votes + %s' if int(voice) > 0 else 'votes = votes - %s'
         })
-        DbConnector().execute_set(sql, (user_id, thread_id, user_id, thread_id, voice, thread_id, thread_id))
-        sql = """
+
+        sql += """
         SELECT
           u.nickname as author,
           t.created,
@@ -39,4 +39,4 @@ class Vote(DbModel):
         JOIN "{2}" as f ON t.forum_id = f.id
         WHERE t.id = {3}
         """.format(Thread.tbl_name, User.tbl_name, Forum.tbl_name, thread_id)
-        return DbConnector().execute_get(sql)[0]
+        return DbConnector.execute_set_and_get(sql, (user_id, thread_id, user_id, thread_id, voice, thread_id, thread_id))[0]

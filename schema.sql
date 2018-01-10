@@ -9,6 +9,7 @@ CREATE TABLE forum
   count_posts   INTEGER DEFAULT 0
 );
 
+DROP INDEX IF EXISTS lower_thread_slug;
 DROP TABLE IF EXISTS thread;
 CREATE TABLE thread
 (
@@ -22,6 +23,9 @@ CREATE TABLE thread
   votes    INTEGER DEFAULT 0
 );
 
+CREATE INDEX lower_thread_slug ON thread(lower(slug));
+
+DROP INDEX IF EXISTS lower_user_name;
 DROP TABLE IF EXISTS member;
 CREATE TABLE member
 (
@@ -31,6 +35,9 @@ CREATE TABLE member
   email    VARCHAR(50),
   about    TEXT
 );
+
+CREATE INDEX lower_user_name ON member (lower(nickname));
+
 
 DROP TABLE IF EXISTS posts;
 CREATE TABLE posts
@@ -52,4 +59,4 @@ CREATE TABLE votes
   thread_id INTEGER,
   voice     INTEGER,
   UNIQUE (user_id, thread_id)
-)
+);

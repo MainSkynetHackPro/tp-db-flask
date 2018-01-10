@@ -50,7 +50,7 @@ class Forum(DbModel):
             'slug': payload['slug'],
             'title': payload['title']
         })
-        return DbConnector().execute_set_and_get(sql)[0]
+        return DbConnector.execute_set_and_get(sql)[0]
 
     def get_by_slug(self, slug):
         sql = """
@@ -69,7 +69,7 @@ class Forum(DbModel):
             'tbl_user': User.tbl_name,
             'slug': slug
         })
-        data = DbConnector().execute_get(sql)
+        data = DbConnector.execute_get(sql)
         return data[0] if data else []
 
     def get_by_slug_with_id(self, slug):
@@ -88,7 +88,7 @@ class Forum(DbModel):
             'tbl_user': User.tbl_name,
             'slug': slug
         })
-        data = DbConnector().execute_get(sql)
+        data = DbConnector.execute_get(sql)
         return data[0] if data else []
 
     @classmethod
@@ -104,7 +104,7 @@ class Forum(DbModel):
             JOIN member ON member.id = forum.user_id
             WHERE LOWER(forum.slug) = LOWER(%s)
         """
-        data = DbConnector().execute_get(sql, (slug,))
+        data = DbConnector.execute_get(sql, (slug,))
         return data[0] if data else None
 
     @classmethod
@@ -144,4 +144,4 @@ class Forum(DbModel):
         if desc == 'true':
             sql = sql.replace('>', '<')
 
-        return DbConnector().execute_get(sql, data)
+        return DbConnector.execute_get(sql, data)

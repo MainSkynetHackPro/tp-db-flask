@@ -1,47 +1,49 @@
 import psycopg2
 import db_config
 
+connection = psycopg2.connect(
+    dbname=db_config.name,
+    user=db_config.user,
+    password=db_config.password,
+    host=db_config.host
+)
+
 
 class DbConnector:
-    connection = None
-    cursor = None
+    @classmethod
+    def connect(cls):
+        return connection
 
-    def __init__(self):
-        self.connect()
+    @classmethod
+    def execute_get(cls, statement, variables=tuple()):
+        connection = cls.connect()
+        cursor = connection.cursor()
+        cursor.execute(statement, variables)
+        connection.commit()
+        data = cls.get_datafield_array(cursor.fetchall(), cursor.description)
+        cursor.close()
+        return data
 
-    def __del__(self):
-        self.disconnect()
+    @classmethod
+    def execute_set(cls, statement, variables=tuple()):
+        connection = cls.connect()
+        cursor = connection.cursor()
+        cursor.execute(statement, variables)
+        connection.commit()
+        cursor.close()
 
-    def create_cursor(self):
-        self.cursor = self.connection.cursor()
+    @classmethod
+    def execute_set_and_get(cls, statement, variables=tuple()):
+        connection = cls.connect()
+        cursor = connection.cursor()
+        cursor.execute(statement, variables)
+        connection.commit()
+        data = cls.get_datafield_array(cursor.fetchall(), cursor.description)
+        cursor.close()
+        return data
 
-    def connect(self):
-        self.connection = psycopg2.connect(
-            dbname=db_config.name,
-            user=db_config.user,
-            password=db_config.password,
-            host=db_config.host
-        )
-        self.create_cursor()
-
-    def disconnect(self):
-        self.cursor.close()
-        self.connection.close()
-
-    def execute_get(self, statement, variables=tuple()):
-        self.cursor.execute(statement, variables)
-        return self.get_datafield_array(self.cursor.fetchall(), self.cursor.description)
-
-    def execute_set(self, statement, variables=tuple()):
-        self.cursor.execute(statement, variables)
-        self.connection.commit()
-
-    def execute_set_and_get(self, statement, variables=tuple()):
-        self.cursor.execute(statement, variables)
-        self.connection.commit()
-        return self.get_datafield_array(self.cursor.fetchall(), self.cursor.description)
-
-    def get_datafield_array(self, fetched, description):
+    @classmethod
+    def get_datafield_array(cls, fetched, description):
         datafield_set = []
         for fetch_item in fetched:
             datafield_item = {}

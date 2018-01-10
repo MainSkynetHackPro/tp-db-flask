@@ -53,16 +53,16 @@ class User(DbModel):
             return user, self.EXISTS
         payload['nickname'] = nickname
         sql = self.sql_insert(fields=payload)
-        user = DbConnector().execute_set_and_get(self.sql_insert_returning(sql))
+        user = DbConnector.execute_set_and_get(self.sql_insert_returning(sql))
         return user[0], self.CREATED
 
     def get_all_by_nickname_or_email(self, nickname, email):
         sql = self.sql_builder(self.sql_select(), self.sql_where_nickname_or_email(nickname, email))
-        return DbConnector().execute_get(sql)
+        return DbConnector.execute_get(sql)
 
     def get_by_nickname(self, nickname, hide_id=True):
         sql = self.sql_builder(self.sql_select(hide_id=hide_id), self.sql_where_nickname(nickname))
-        data = DbConnector().execute_get(sql)
+        data = DbConnector.execute_get(sql)
         return data[0] if data else {}
 
     def update_by_nickname(self, nickname, payload):
@@ -87,7 +87,7 @@ class User(DbModel):
 
     def get_others_with_nickname_or_email(self, user_id, nickname, email):
         sql = self.sql_builder(self.sql_select(), self.sql_others_nickname_or_email(user_id, nickname, email))
-        return DbConnector().execute_get(sql)
+        return DbConnector.execute_get(sql)
 
     def update_by_id(self, id, payload):
         update = ''
@@ -108,7 +108,7 @@ class User(DbModel):
             'update_str': update
         })
 
-        return DbConnector().execute_set_and_get(sql)[0]
+        return DbConnector.execute_set_and_get(sql)[0]
 
     def find_others_with_nickname_or_email(self, user_id, nickname, email):
         if not (nickname or email):
@@ -127,7 +127,7 @@ class User(DbModel):
             'tbl_name': self.tbl_name,
             'id': user_id
         })
-        data = DbConnector().execute_get(self.sql_builder(self.sql_select(), where_condition))
+        data = DbConnector.execute_get(self.sql_builder(self.sql_select(), where_condition))
         return data[0] if data else []
 
     @classmethod
@@ -149,7 +149,7 @@ class User(DbModel):
             sql += " %s,"
         sql = sql[:-1]
         sql += ")"
-        return DbConnector().execute_get(sql, l_names)
+        return DbConnector.execute_get(sql, l_names)
 
 
 

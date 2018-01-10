@@ -90,12 +90,9 @@ def get_thread_messages(slug_or_id):
 @thread.route('/<slug_or_id>/vote', methods=['POST'])
 def vote_thread(slug_or_id):
     post_data = request.get_json()
-    thread = Thread.get_by_slug_or_id(slug_or_id)
-    if not thread:
-        return json_response({'message': 'Thread not found'}, 404)
-    user = User().get_by_nickname(post_data['nickname'], hide_id=False)
-    if not user:
-        return json_response({'message': 'User not found'}, 404)
-    thread = Vote.vote_for_thread(user['id'], post_data['voice'], thread['id'])
+    thread_id, user_id = Thread.check_user_and_thread(thread_slug_or_id=slug_or_id, nickname=post_data['nickname'])
+    if not user_id and not thread_id:
+        return json_response({'message': 'Thread OR USER not found'}, 404)
+    thread = Vote.vote_for_thread(user_id, post_data['voice'], thread_id)
     thread['created'] = format_time(thread['created'])
     return json_response(thread, 200)

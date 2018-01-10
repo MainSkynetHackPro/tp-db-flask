@@ -34,7 +34,7 @@ class Post(DbModel):
         sql += """
             RETURNING id
         """
-        ids = DbConnector().execute_set_and_get(sql, insert_data)
+        ids = DbConnector.execute_set_and_get(sql, insert_data)
         sql = """
             SELECT
               m.nickname as author,
@@ -59,7 +59,7 @@ class Post(DbModel):
         for i in ids:
             sql += "{0}, ".format(i['id'])
         sql = sql[:-2] + ")" + " ORDER BY id"
-        return DbConnector().execute_get(sql)
+        return DbConnector.execute_get(sql)
 
     @classmethod
     def get_info(cls, post_id, related):
@@ -85,7 +85,7 @@ class Post(DbModel):
                 'f_tbl_name': Forum.tbl_name,
             })
 
-        post = DbConnector().execute_get(sql, {'post_id': post_id})
+        post = DbConnector.execute_get(sql, {'post_id': post_id})
         if post:
             post[0]['isEdited'] = post[0]['isedited']
             post[0]['created'] = format_time(post[0]['created'])
@@ -125,7 +125,7 @@ class Post(DbModel):
             'f_tbl_name': Forum.tbl_name,
         })
 
-        post = DbConnector().execute_get(sql, {'post_id': post_id})
+        post = DbConnector.execute_get(sql, {'post_id': post_id})
         if post:
             post[0]['created'] = format_time(post[0]['created'])
         return post[0] if post else []
@@ -155,7 +155,7 @@ class Post(DbModel):
             'update_statement': update_statement,
             'post_id': post_id,
         })
-        DbConnector().execute_set(sql, data)
+        DbConnector.execute_set(sql, data)
         return old_post
 
     @classmethod
@@ -176,5 +176,5 @@ class Post(DbModel):
             'in_condition': in_condition,
             'thread_id': thread_id
         })
-        return DbConnector().execute_get(sql, in_vars)
+        return DbConnector.execute_get(sql, in_vars)
 

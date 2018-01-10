@@ -58,5 +58,5 @@ class DbModel:
         sql = """
             SELECT COUNT(*) as count FROM {tbl_name}
         """.format_map({'tbl_name': cls.tbl_name})
-        return DbConnector().execute_get(sql)[0]['count']
+        return DbConnector.execute_get(sql)[0]['count']
 

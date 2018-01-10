@@ -29,7 +29,7 @@ class Thread(DbModel):
                   t.message,
                   t.slug as slug,
                   t.title,
-                  0 as votes
+                  t.votes as votes
                 FROM "{0}" as t
                 JOIN "{1}" as u ON u.id = t.user_id
                 JOIN "{2}" as f ON t.forum_id = f.id
@@ -40,7 +40,7 @@ class Thread(DbModel):
             Forum.tbl_name,
             where_condition
         )
-        connector = DbConnector()
+        connector = DbConnector
         data = connector.execute_get(sql)
         if data:
             return data[0]
@@ -64,7 +64,7 @@ class Thread(DbModel):
             JOIN "{2}" as f ON t.forum_id = f.id
             WHERE t.slug='{3}'
         """.format(cls.tbl_name, User.tbl_name, Forum.tbl_name, SqlGenerator.safe_variable(slug))
-        connector = DbConnector()
+        connector = DbConnector
         data = connector.execute_get(sql)
         if data:
             return data[0]
@@ -84,7 +84,7 @@ class Thread(DbModel):
               t.message,
               t.slug as slug,
               t.title,
-              0 as votes
+              t.votes as votes
             FROM "{0}" as t
             JOIN "{1}" as u ON u.id = t.user_id
             JOIN "{2}" as f ON t.forum_id = f.id
@@ -109,7 +109,7 @@ class Thread(DbModel):
             sql += 'ORDER BY t.created'
         if limit:
             sql += " LIMIT {0}".format(int(limit))
-        return DbConnector().execute_get(sql, data_tuple)
+        return DbConnector.execute_get(sql, data_tuple)
 
     @classmethod
     def create_and_get_serialized(cls, user_id, forum_id, title, message, created=None, slug=None):
@@ -130,7 +130,7 @@ class Thread(DbModel):
             """, '{0}'""".format(SqlGenerator.safe_variable(slug)) if slug else '',
             ', slug' if slug else ''
         )
-        connector = DbConnector()
+        connector = DbConnector
         return connector.execute_set_and_get(sql)[0]
 
     @classmethod
@@ -156,7 +156,7 @@ class Thread(DbModel):
             data = (slug_or_id, slug_or_id,)
         except ValueError:
             data = (slug_or_id,)
-        thread = DbConnector().execute_get(sql, data)
+        thread = DbConnector.execute_get(sql, data)
         return thread[0] if thread else []
 
     @classmethod
@@ -183,7 +183,7 @@ class Thread(DbModel):
             data = (slug_or_id, slug_or_id,)
         except ValueError:
             data = (slug_or_id,)
-        thread = DbConnector().execute_get(sql, data)
+        thread = DbConnector.execute_get(sql, data)
         return thread[0] if thread else []
 
     @classmethod
@@ -225,7 +225,7 @@ class Thread(DbModel):
             data['limit'] = limit
         if since:
             data['since_id'] = since
-        return DbConnector().execute_get(sql, data)
+        return DbConnector.execute_get(sql, data)
 
     @classmethod
     def get_posts_tree_sorted(cls, thread_id, since, limit, desc):
@@ -374,7 +374,7 @@ class Thread(DbModel):
             data['since'] = since
         if desc == "true":
             sql = sql.replace('>', '<')
-        return DbConnector().execute_get(sql, data)
+        return DbConnector.execute_get(sql, data)
 
     @classmethod
     def get_posts_parent_tree_sorter(cls, thread_id, since, limit, desc):
@@ -526,7 +526,7 @@ class Thread(DbModel):
             data['since'] = since
         if desc == "true":
             sql = sql.replace('>', '<')
-        return DbConnector().execute_get(sql, data)
+        return DbConnector.execute_get(sql, data)
 
     @classmethod
     def update_thread(cls, thread_id, update_data, bedore_update):
@@ -546,6 +546,40 @@ class Thread(DbModel):
             'update_statement': update_statement,
             'thread_id': thread_id,
         })
-        DbConnector().execute_set(sql, data)
+        DbConnector.execute_set(sql, data)
         return bedore_update
+
+    @classmethod
+    def check_user_and_thread(cls, thread_slug_or_id, nickname):
+        if thread_slug_or_id.isdigit():
+            thread_where_statement = "t.id = %(slug_or_id)s "
+        else:
+            thread_where_statement = "LOWER(t.slug) = %(slug_or_id)s "
+            thread_slug_or_id = thread_slug_or_id.lower()
+        sql = """
+            SELECT
+                'thread_id' AS sub,
+                t.id AS id
+            FROM {tbl_thread} AS t
+            WHERE {thread_where_statement}
+            UNION
+            SELECT 
+                'user_id' AS sub,
+                u.id AS id
+            FROM {tbl_user} AS u
+            WHERE LOWER(u.nickname) = %(lowered_nickname)s
+        """.format_map({
+            'tbl_thread': cls.tbl_name,
+            'tbl_user': User.tbl_name,
+            'thread_where_statement': thread_where_statement
+        })
+
+        data = DbConnector.execute_get(sql, {
+            'lowered_nickname': nickname.lower(),
+            'slug_or_id': thread_slug_or_id
+        })
+        if len(data) == 2:
+            return data[0]['id'], data[1]['id']
+        else:
+            return None, None
 
