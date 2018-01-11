@@ -230,140 +230,32 @@ class Thread(DbModel):
     def get_posts_tree_sorted(cls, thread_id, since, limit, desc):
         from models.post import Post
 
-        if since:
-            sql = """
-                WITH RECURSIVE temp(
-                    id,
-                    created,
-                    isEdited,
-                    message,
-                    parent,
-                    thread,
-                    author,
-                    forum,
-                    PATH,
-                    LEVEL
-                ) AS (
-                    SELECT
-                        p.id AS id,
-                        p.created AS created,
-                        p.is_edited AS isEdited,
-                        p.message AS message,
-                        p.parent_id AS parent,
-                        p.thread_id AS thread,
-                        u.nickname AS author,
-                        f.slug AS forum,
-                        array[p.id] as PATH,
-                        1
-                    FROM {tbl_post} AS p
-                    JOIN {tbl_user} AS u ON u.id = p.user_id
-                    JOIN {tbl_thread} AS t ON t.id = p.thread_id
-                    JOIN {tbl_forum} AS f ON f.id = t.forum_id
-                    WHERE p.parent_id = 0 AND p.thread_id = %(thread_id)s
-                    UNION SELECT 
-                      p.id,
-                      p.created,
-                      p.is_edited as isEdited,
-                      p.message,
-                      p.parent_id as parent,
-                      p.thread_id as thread,
-                      u.nickname as nickname,
-                      f.slug as forum,
-                      temp.PATH || p.id, LEVEL + 1
-                    FROM {tbl_post} AS p
-                    JOIN {tbl_user} AS u ON u.id = p.user_id
-                    JOIN {tbl_thread} AS t ON t.id = p.thread_id
-                    JOIN {tbl_forum} AS f ON f.id = t.forum_id
-                    JOIN temp ON temp.id = p.parent_id
-                    WHERE p.thread_id = %(thread_id)s
-                ), rows AS(
-                    SELECT row_number() OVER (ORDER BY PATH) AS row_num, id, author, created, forum, isEdited, 
-                    message, parent, thread, PATH, LEVEL FROM temp
-                ), one_row AS (
-                    SELECT * FROM rows where id = %(since)s
-                )
-                SELECT 
-                  rows.id,
-                  rows.author,
-                  rows.created,
-                  rows.forum,
-                  rows.isEdited,
-                  rows.message,
-                  rows.parent,
-                  rows.thread
-                FROM rows, one_row
-                WHERE rows.row_num > one_row.row_num
-                ORDER BY rows.PATH {additional_order}
-                {limit_statement}
-            """.format_map({
-                'tbl_post': Post.tbl_name,
-                'tbl_user': User.tbl_name,
-                'tbl_thread': Thread.tbl_name,
-                'tbl_forum': Forum.tbl_name,
-                'additional_order': "DESC " if desc == "true" else "ASC ",
-                'limit_statement': "LIMIT %(limit)s" if limit else ""
-            })
-        else:
-            sql = """
-                WITH RECURSIVE temp(
-                    id,
-                    created,
-                    isEdited,
-                    message,
-                    parent,
-                    thread,
-                    author,
-                    forum,
-                    PATH,
-                    LEVEL
-                ) AS (
-                    SELECT
-                        p.id AS id,
-                        p.created AS created,
-                        p.is_edited AS isEdited,
-                        p.message AS message,
-                        p.parent_id AS parent,
-                        p.thread_id AS thread,
-                        u.nickname AS author,
-                        f.slug AS forum,
-                        array[p.id] as PATH,
-                        1
-                    FROM {tbl_post} AS p
-                    JOIN {tbl_user} AS u ON u.id = p.user_id
-                    JOIN {tbl_thread} AS t ON t.id = p.thread_id
-                    JOIN {tbl_forum} AS f ON f.id = t.forum_id
-                    WHERE p.parent_id = 0 AND p.thread_id = %(thread_id)s
-                    UNION SELECT 
-                          p.id,
-                          p.created,
-                          p.is_edited as isEdited,
-                          p.message,
-                          p.parent_id as parent,
-                          p.thread_id as thread,
-                          u.nickname as nickname,
-                          f.slug as forum,
-                          temp.PATH || p.id, LEVEL + 1
-                    FROM {tbl_post} AS p
-                    JOIN {tbl_user} AS u ON u.id = p.user_id
-                    JOIN {tbl_thread} AS t ON t.id = p.thread_id
-                    JOIN {tbl_forum} AS f ON f.id = t.forum_id
-                    JOIN temp ON temp.id = p.parent_id
-                    WHERE p.thread_id = %(thread_id)s
-                )
-                SELECT 
-                  *
-                FROM temp
-                ORDER BY PATH {additional_order}
-                {limit_statement}
-            """.format_map({
-                'tbl_post': Post.tbl_name,
-                'tbl_user': User.tbl_name,
-                'tbl_thread': Thread.tbl_name,
-                'tbl_forum': Forum.tbl_name,
-                'additional_order': "DESC " if desc == "true" else "ASC ",
-                'limit_statement': "LIMIT %(limit)s" if limit else ""
-            })
-
+        sql = """
+            SELECT
+                p.id AS id,
+                p.created AS created,
+                p.is_edited AS isEdited,
+                p.message AS message,
+                p.parent_id AS parent,
+                p.thread_id AS thread,
+                u.nickname AS author,
+                f.slug AS forum
+            FROM {tbl_post} AS p
+            JOIN {tbl_user} AS u ON u.id = p.user_id
+            JOIN {tbl_thread} AS t ON t.id = p.thread_id
+            JOIN {tbl_forum} AS f ON f.id = t.forum_id
+            WHERE t.id = %(thread_id)s {where_additional}
+            ORDER BY p.path {order_direction}
+            {limit_statement}
+        """.format_map({
+            'tbl_post': Post.tbl_name,
+            'tbl_user': User.tbl_name,
+            'tbl_thread': Thread.tbl_name,
+            'tbl_forum': Forum.tbl_name,
+            'where_additional': "AND p.path > (SELECT path FROM Posts WHERE id = %(since)s) " if since else " ",
+            'order_direction': "DESC " if desc == "true" else "ASC ",
+            'limit_statement': "LIMIT %(limit)s" if limit else " "
+        })
         data = {
             'thread_id': thread_id,
         }
@@ -567,6 +459,7 @@ class Thread(DbModel):
                 u.id AS id
             FROM {tbl_user} AS u
             WHERE LOWER(u.nickname) = %(lowered_nickname)s
+            ORDER BY sub
         """.format_map({
             'tbl_thread': cls.tbl_name,
             'tbl_user': User.tbl_name,

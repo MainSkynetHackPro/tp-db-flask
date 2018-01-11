@@ -118,10 +118,10 @@ class Forum(DbModel):
                 u.email,
                 u.fullname
             FROM {tbl_forum} AS f 
-            LEFT JOIN {tbl_thread} AS t ON t.forum_id = f.id
-            LEFT JOIN {tbl_post} AS p ON p.thread_id = t.id
-            LEFT JOIN {tbl_user} AS u ON u.id = p.user_id OR u.id = t.user_id
-            WHERE f.id = {forum_id} AND u.id IS NOT NULL {additional_where}
+            INNER JOIN {tbl_thread} AS t ON t.forum_id = f.id
+            INNER JOIN {tbl_post} AS p ON p.thread_id = t.id
+            INNER JOIN {tbl_user} AS u ON u.id = p.user_id OR u.id = t.user_id
+            WHERE f.id = {forum_id} {additional_where}
             GROUP BY u.id
             ORDER BY u.nickname {additional_order}
             {limit}
@@ -133,7 +133,7 @@ class Forum(DbModel):
             'forum_id': forum_id,
             'additional_order': "DESC " if desc == 'true' else " ",
             'limit': "LIMIT %(limit)s " if limit else " ",
-            'additional_where': "AND u.nickname > %(since)s" if since else " ",
+            'additional_where': "AND lower(u.nickname) > lower(%(since)s)" if since else " ",
         })
 
         data = {}
@@ -143,5 +143,4 @@ class Forum(DbModel):
             data['since'] = since
         if desc == 'true':
             sql = sql.replace('>', '<')
-
         return DbConnector.execute_get(sql, data)
