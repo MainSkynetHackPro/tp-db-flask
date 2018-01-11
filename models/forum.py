@@ -112,17 +112,22 @@ class Forum(DbModel):
         from models.post import Post
         from models.thread import Thread
         sql = """
-            SELECT 
-                u.nickname,
-                u.about,
-                u.email,
-                u.fullname
-            FROM {tbl_forum} AS f 
-            INNER JOIN {tbl_thread} AS t ON t.forum_id = f.id
-            INNER JOIN {tbl_post} AS p ON p.thread_id = t.id
-            INNER JOIN {tbl_user} AS u ON u.id = p.user_id OR u.id = t.user_id
-            WHERE f.id = {forum_id} {additional_where}
-            GROUP BY u.id
+            SELECT
+              u.nickname,
+              u.about,
+              u.email,
+              u.fullname
+            FROM (
+               SELECT t.user_id
+               FROM thread AS t
+               WHERE t.forum_id = {forum_id}
+               UNION
+               SELECT p.user_id
+               FROM posts AS p
+                 INNER JOIN thread AS t ON t.id = p.thread_id
+               WHERE t.forum_id = {forum_id}) AS sub
+            JOIN member AS u ON sub.user_id = u.id
+            {additional_where}
             ORDER BY u.nickname {additional_order}
             {limit}
         """.format_map({
@@ -143,4 +148,5 @@ class Forum(DbModel):
             data['since'] = since
         if desc == 'true':
             sql = sql.replace('>', '<')
-        return DbConnector.execute_get(sql, data)
+        resp = DbConnector.execute_get(sql, data)
+        return [] if not resp or resp[0]['email'] is None else resp
