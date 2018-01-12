@@ -29,6 +29,7 @@ def create_thread(slug_or_id):
         for a in authors:
             if a['nickname'] == post['author'].lower():
                 post['author_id'] = a['id']
+                post['author_nickname'] = a['nickname']
         post['parent_id'] = post['parent'] if 'parent' in post else 0
 
     if len(thread) > 0:

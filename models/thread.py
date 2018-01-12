@@ -111,12 +111,15 @@ class Thread(DbModel):
         return DbConnector.execute_get(sql, data_tuple)
 
     @classmethod
-    def create_and_get_serialized(cls, user_id, forum_id, title, message, created=None, slug=None):
+    def create_and_get_serialized(cls, user_id, forum_id, title, message, user_nickname, forum_slug, created=None, slug=None,):
         sql = """
             UPDATE forum SET count_threads = count_threads + 1 WHERE id = {3};
+            INSERT INTO user_forum
+            (user_id, forum_id, user_nickname)
+            VALUES ({2}, {3}, %s) ON CONFLICT DO NOTHING;
             INSERT INTO {0}
-            (user_id, forum_id, title, message, created{1})
-            VALUES ({2}, {3}, '{4}', '{5}', {6}{7})
+            (user_id, forum_id, forum_slug, title, message, created{1})
+            VALUES ({2}, {3}, %s , '{4}', '{5}', {6}{7})
             RETURNING id, title, message, created{8}
         """.format(
             cls.tbl_name,
@@ -130,7 +133,7 @@ class Thread(DbModel):
             ', slug' if slug else ''
         )
         connector = DbConnector
-        return connector.execute_set_and_get(sql)[0]
+        return connector.execute_set_and_get(sql, (user_nickname, forum_slug))[0]
 
     @classmethod
     def get_by_slug_or_id(cls, slug_or_id):
@@ -164,16 +167,16 @@ class Thread(DbModel):
                 SELECT
                   u.nickname as author,
                   t.created,
-                  f.slug as forum,
+                  t.forum_slug as forum,
                   t.id,
                   t.message,
                   t.slug as slug,
                   t.title,
                   t.votes as votes,
-                  f.id as forum_id
+                  t.forum_id as forum_id
                 FROM "{0}" as t
                 JOIN "{1}" as u ON u.id = t.user_id
-                JOIN "{2}" as f ON t.forum_id = f.id
+                -- JOIN "{2}" as f ON t.forum_id = f.id
                 WHERE LOWER(t.slug) = LOWER(%s)
                 """.format(cls.tbl_name, User.tbl_name, Forum.tbl_name)
         try:
@@ -198,11 +201,11 @@ class Thread(DbModel):
                 p.parent_id AS parent,
                 p.thread_id AS thread,
                 u.nickname AS author,
-                f.slug AS forum
+                t.forum_slug AS forum
             FROM {tbl_post} AS p
             JOIN {tbl_user} AS u ON u.id = p.user_id
             JOIN {tbl_thread} AS t ON t.id = p.thread_id
-            JOIN {tbl_forum} AS f ON f.id = t.forum_id
+            --JOIN {tbl_forum} AS f ON f.id = t.forum_id
             WHERE t.id = %(thread_id)s {where_additional}
             ORDER BY p.created {order_direction}, p.id {order_direction}
             {limit_statement}
@@ -239,11 +242,11 @@ class Thread(DbModel):
                 p.parent_id AS parent,
                 p.thread_id AS thread,
                 u.nickname AS author,
-                f.slug AS forum
+                t.forum_slug AS forum
             FROM {tbl_post} AS p
             JOIN {tbl_user} AS u ON u.id = p.user_id
             JOIN {tbl_thread} AS t ON t.id = p.thread_id
-            JOIN {tbl_forum} AS f ON f.id = t.forum_id
+            --JOIN {tbl_forum} AS f ON f.id = t.forum_id
             WHERE t.id = %(thread_id)s {where_additional}
             ORDER BY p.path {order_direction}
             {limit_statement}
@@ -270,144 +273,46 @@ class Thread(DbModel):
     @classmethod
     def get_posts_parent_tree_sorter(cls, thread_id, since, limit, desc):
         from models.post import Post
-        if since:
-            sql = """
-            WITH RECURSIVE temp(
-                id,
-                created,
-                isEdited,
-                message,
-                parent,
-                thread,
-                author,
-                forum,
-                PATH,
-                LEVEL
-            ) AS (
-                SELECT
-                    p.id AS id,
-                    p.created AS created,
-                    p.is_edited AS isEdited,
-                    p.message AS message,
-                    p.parent_id AS parent,
-                    p.thread_id AS thread,
-                    u.nickname AS author,
-                    f.slug AS forum,
-                    array[p.id] as PATH,
-                    1
-                FROM (
-                  SELECT id, user_id, created, is_edited, message, parent_id, thread_id FROM {tbl_post}
-                  WHERE parent_id = 0 AND thread_id = %(thread_id)s
-                ) AS p
-                JOIN {tbl_user} AS u ON u.id = p.user_id
-                JOIN {tbl_thread} AS t ON t.id = p.thread_id
-                JOIN {tbl_forum} AS f ON f.id = t.forum_id
-                WHERE p.parent_id = 0 AND p.thread_id = %(thread_id)s
-                UNION SELECT 
-                  p.id,
-                  p.created,
-                  p.is_edited as isEdited,
-                  p.message,
-                  p.parent_id as parent,
-                  p.thread_id as thread,
-                  u.nickname as nickname,
-                  f.slug as forum,
-                  temp.PATH || p.id, LEVEL + 1
-                FROM {tbl_post} AS p
-                JOIN {tbl_user} AS u ON u.id = p.user_id
-                JOIN {tbl_thread} AS t ON t.id = p.thread_id
-                JOIN {tbl_forum} AS f ON f.id = t.forum_id
-                JOIN temp ON temp.id = p.parent_id
-                WHERE p.thread_id = %(thread_id)s
-            ), rows AS(
-                SELECT row_number() OVER (ORDER BY PATH) AS row_num, id, author, created, forum, isEdited, 
-                message, parent, thread, PATH, LEVEL FROM temp
-            ), one_row AS (
-                SELECT * FROM rows where id = %(since)s
-            )
-            SELECT 
-              rows.id,
-              rows.author,
-              rows.created,
-              rows.forum,
-              rows.isEdited,
-              rows.message,
-              rows.parent,
-              rows.thread
-            FROM rows, one_row
-            WHERE rows.row_num > one_row.row_num
-            ORDER BY rows.PATH {additional_order}
-        """.format_map({
-                'tbl_post': Post.tbl_name,
-                'tbl_user': User.tbl_name,
-                'tbl_thread': Thread.tbl_name,
-                'tbl_forum': Forum.tbl_name,
-                'additional_order': "DESC " if desc == "true" else "ASC ",
-            })
-        else:
-            sql = """
-                WITH RECURSIVE temp(
-                    id,
-                    created,
-                    isEdited,
-                    message,
-                    parent,
-                    thread,
-                    author,
-                    forum,
-                    PATH,
-                    LEVEL
-                ) AS (
-                    SELECT
-                        p.id AS id,
-                        p.created AS created,
-                        p.is_edited AS isEdited,
-                        p.message AS message,
-                        p.parent_id AS parent,
-                        p.thread_id AS thread,
-                        u.nickname AS author,
-                        f.slug AS forum,
-                        array[p.id] as PATH,
-                        1
-                    FROM (
-                      SELECT id, user_id, created, is_edited, message, parent_id, thread_id FROM {tbl_post}
-                      WHERE parent_id = 0 AND thread_id = %(thread_id)s
-                      ORDER BY id {additional_order}
-                      {limit_statement}
-                    ) AS p
-                    JOIN {tbl_user} AS u ON u.id = p.user_id
-                    JOIN {tbl_thread} AS t ON t.id = p.thread_id
-                    JOIN {tbl_forum} AS f ON f.id = t.forum_id
-                    WHERE p.parent_id = 0 AND p.thread_id = %(thread_id)s
-                    UNION SELECT 
-                        p.id AS id,
-                        p.created AS created,
-                        p.is_edited AS isEdited,
-                        p.message AS message,
-                        p.parent_id AS parent,
-                        p.thread_id AS thread,
-                        u.nickname AS author,
-                        f.slug AS forum,
-                        temp.PATH || p.id, LEVEL + 1
-                    FROM {tbl_post} AS p
-                    JOIN {tbl_user} AS u ON u.id = p.user_id
-                    JOIN {tbl_thread} AS t ON t.id = p.thread_id
-                    JOIN {tbl_forum} AS f ON f.id = t.forum_id
-                    JOIN temp ON temp.id = p.parent_id
-                    WHERE p.thread_id = %(thread_id)s
-                )
-                SELECT 
-                  *
-                FROM temp
-                ORDER BY PATH {additional_order}
-            """.format_map({
-                'tbl_post': Post.tbl_name,
-                'tbl_user': User.tbl_name,
-                'tbl_thread': Thread.tbl_name,
-                'tbl_forum': Forum.tbl_name,
-                'additional_order': "DESC " if desc == "true" else "ASC ",
-                'limit_statement': "LIMIT %(limit)s" if limit else ""
-            })
+        sql = """
+            SELECT
+              sub.id       AS id,
+              sub.created  AS created,
+              sub.isEdited AS isEdited,
+              sub.message  AS message,
+              sub.parent   AS parent,
+              sub.thread   AS thread,
+              sub.author   AS author,
+              sub.forum    AS forum
+            FROM
+              (SELECT
+                 DENSE_RANK()
+                 OVER (
+                   ORDER BY p.root_id {order_direction} ) AS root_count,
+                 p.root_id,
+                 p.id                       AS id,
+                 p.created                  AS created,
+                 p.is_edited                AS isEdited,
+                 p.message                  AS message,
+                 p.parent_id                AS parent,
+                 p.thread_id                AS thread,
+                 u.nickname                 AS author,
+                 t.forum_slug               AS forum
+               FROM posts AS p
+                 JOIN member AS u ON u.id = p.user_id
+                 JOIN thread AS t ON t.id = p.thread_id
+                 --JOIN forum AS f ON f.id = t.forum_id
+               WHERE t.id = %(thread_id)s {where_additional}
+               ORDER BY p.path {order_direction}) AS sub
+               {limit_statement}
+                """.format_map({
+            'tbl_post': Post.tbl_name,
+            'tbl_user': User.tbl_name,
+            'tbl_thread': Thread.tbl_name,
+            'tbl_forum': Forum.tbl_name,
+            'where_additional': "AND p.path > (SELECT path FROM Posts WHERE id = %(since)s) " if since else " ",
+            'order_direction': "DESC " if desc == "true" else "ASC ",
+            'limit_statement': "WHERE root_count <= %(limit)s" if limit else " "
+        })
         data = {
             'thread_id': thread_id,
         }

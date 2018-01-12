@@ -109,32 +109,19 @@ class Forum(DbModel):
 
     @classmethod
     def get_forum_users(cls, forum_id, limit, since, desc):
-        from models.post import Post
-        from models.thread import Thread
         sql = """
             SELECT
               u.nickname,
               u.about,
               u.email,
               u.fullname
-            FROM (
-               SELECT t.user_id
-               FROM thread AS t
-               WHERE t.forum_id = {forum_id}
-               UNION
-               SELECT p.user_id
-               FROM posts AS p
-                 INNER JOIN thread AS t ON t.id = p.thread_id
-               WHERE t.forum_id = {forum_id}) AS sub
-            JOIN member AS u ON sub.user_id = u.id
-            {additional_where}
-            ORDER BY u.nickname {additional_order}
+            FROM member AS u
+              INNER JOIN user_forum AS uf ON u.id = uf.user_id
+            WHERE uf.forum_id = {forum_id} {additional_where}
+            GROUP BY u.id
+            ORDER BY lower(u.nickname){additional_order}
             {limit}
         """.format_map({
-            'tbl_forum': cls.tbl_name,
-            'tbl_thread': Thread.tbl_name,
-            'tbl_post': Post.tbl_name,
-            'tbl_user': User.tbl_name,
             'forum_id': forum_id,
             'additional_order': "DESC " if desc == 'true' else " ",
             'limit': "LIMIT %(limit)s " if limit else " ",

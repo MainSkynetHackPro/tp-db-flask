@@ -50,8 +50,10 @@ def create_thread(slug):
         forum_id=forum['id'],
         title=json_data['title'],
         message=json_data['message'],
+        user_nickname=user['nickname'],
+        forum_slug=forum['slug'],
         created=json_data['created'] if 'created' in json_data else None,
-        slug=json_data['slug'] if 'slug' in json_data else None
+        slug=json_data['slug'] if 'slug' in json_data else None,
     )
     thread['author'] = user['nickname']
     thread['forum'] = forum['slug']

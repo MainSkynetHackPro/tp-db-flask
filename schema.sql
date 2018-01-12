@@ -4,12 +4,19 @@ DROP INDEX IF EXISTS lower_user_name;
 DROP INDEX IF EXISTS lower_thread_slug;
 DROP INDEX IF EXISTS forum_user_id;
 DROP INDEX IF EXISTS forum_slug_lower;
+DROP INDEX IF EXISTS user_forum_forum_id;
+DROP INDEX IF EXISTS post_created_flat;
+DROP INDEX IF EXISTS post_thread_author;
+DROP INDEX IF EXISTS post_path_thread_id;
+DROP INDEX IF EXISTS thread_forum_author;
+DROP INDEX IF EXISTS post_created_flat_sm;
 
 DROP TABLE IF EXISTS forum;
 DROP TABLE IF EXISTS thread;
 DROP TABLE IF EXISTS member;
 DROP TABLE IF EXISTS posts;
 DROP TABLE IF EXISTS votes;
+DROP TABLE IF EXISTS user_forum;
 
 CREATE TABLE forum
 (
@@ -23,14 +30,15 @@ CREATE TABLE forum
 
 CREATE TABLE thread
 (
-  id       SERIAL PRIMARY KEY NOT NULL,
-  user_id  INTEGER,
-  forum_id INTEGER,
-  slug     VARCHAR(50),
-  title    VARCHAR(256),
-  message  TEXT,
-  created  TIMESTAMP WITH TIME ZONE,
-  votes    INTEGER DEFAULT 0
+  id         SERIAL PRIMARY KEY NOT NULL,
+  user_id    INTEGER,
+  forum_id   INTEGER,
+  forum_slug VARCHAR(50),
+  slug       VARCHAR(50),
+  title      VARCHAR(256),
+  message    TEXT,
+  created    TIMESTAMP WITH TIME ZONE,
+  votes      INTEGER DEFAULT 0
 );
 
 CREATE TABLE member
@@ -64,10 +72,21 @@ CREATE TABLE votes
   UNIQUE (user_id, thread_id)
 );
 
+CREATE TABLE user_forum
+(
+  id            SERIAL PRIMARY KEY NOT NULL,
+  forum_id      INTEGER,
+  user_id       INTEGER,
+  user_nickname VARCHAR(50),
+  UNIQUE (forum_id, user_id)
+);
+
 CREATE INDEX post_thread_id
   ON posts (thread_id);
 CREATE INDEX posts_path
   ON posts (path);
+CREATE INDEX post_thread_author
+  ON posts (thread_id, user_id, id);
 CREATE INDEX lower_user_name
   ON member (lower(nickname));
 CREATE INDEX lower_thread_slug
@@ -76,6 +95,17 @@ CREATE INDEX forum_user_id
   ON forum (user_id);
 CREATE INDEX forum_slug_lower
   ON forum (lower(slug));
+CREATE INDEX user_forum_forum_id
+  ON user_forum (forum_id);
+CREATE INDEX post_path_thread_id
+  ON posts (thread_id, path);
+CREATE INDEX post_created_flat
+  ON posts (thread_id, created, id);
+CREATE INDEX post_created_flat_sm
+  ON posts (thread_id, id);
+CREATE INDEX thread_forum_author
+  ON thread (forum_id, user_id);
+
 
 DROP FUNCTION IF EXISTS create_parent_path();
 CREATE FUNCTION create_parent_path()

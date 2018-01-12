@@ -14,13 +14,26 @@ class Post(DbModel):
         insert_data = tuple()
         if not posts_data:
             return []
+        rel_insert = ""
+        for post in posts_data:
+            rel_insert += "(%s, %s, %s), "
+            insert_data += (
+                post['author_id'],
+                forum_id,
+                post['author_nickname']
+            )
+        rel_insert = rel_insert[:-2]
         sql = """
             UPDATE forum SET count_posts = count_posts + {count_posts} WHERE id = {forum_id};
+            INSERT INTO user_forum 
+            (user_id, forum_id, user_nickname) VALUES
+            {rel_insert} ON CONFLICT DO NOTHING;
             INSERT INTO {tbl_name} (user_id, thread_id, parent_id, message) VALUES
         """.format_map({
             'tbl_name': cls.tbl_name,
             'count_posts': len(posts_data),
-            'forum_id': forum_id
+            'forum_id': forum_id,
+            'rel_insert': rel_insert
         })
         for post in posts_data:
             sql += "(%s, %s, %s, %s),"
