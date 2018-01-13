@@ -16,7 +16,10 @@ RUN /usr/bin/pip3 install -r tpdb/requirements.txt
 
 RUN echo "listen_addresses='*'" >> /etc/postgresql/9.5/main/postgresql.conf &&\
      echo "synchronous_commit=off" >> /etc/postgresql/9.5/main/postgresql.conf &&\
-     echo "shared_buffers = 256MB" >> /etc/postgresql/9.5/main/postgresql.conf &&\
+     echo "shared_buffers = 512MB" >> /etc/postgresql/9.5/main/postgresql.conf &&\
+     echo "effective_cache_size = 1024MB" >> /etc/postgresql/9.5/main/postgresql.conf &&\
+     echo "wal_writer_delay = 2000ms" >> /etc/postgresql/9.5/main/postgresql.conf &&\
+     echo "autovacuum = off" >> /etc/postgresql/9.5/main/postgresql.conf &&\
      echo "autovacuum = off" >> /etc/postgresql/9.5/main/postgresql.conf &&\
      echo "fsync = 'off'" >> /etc/postgresql/9.5/main/postgresql.conf
 
